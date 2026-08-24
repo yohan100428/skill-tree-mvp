@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { applyEdgeChanges, applyNodeChanges } from '@xyflow/react'
-import type { Connection, EdgeChange, NodeChange, XYPosition } from '@xyflow/react'
+import type { Connection } from '@xyflow/react'
 import type {
   DailyQuest,
   SkillData,
@@ -12,19 +11,33 @@ import {
   addDependency,
   deleteSkill,
   recalculateMap,
-  removeDependency,
   toNonNegativeInteger,
   unlockSkill as unlockSkillInMap,
 } from '../utils/skillLogic'
 import { completeDailyQuest } from '../utils/questLogic'
 import { loadWorkspace, saveWorkspace } from '../utils/storage'
+import { createDefaultWorkspace } from '../data/defaultTree'
 
 const makeId = (prefix: string): string =>
   `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`
 
 type CategoryPatch = Partial<Pick<TreeCategory, 'name' | 'coinName'>>
-type QuestPatch = Partial<Pick<DailyQuest, 'title' | 'rewardCoins'>>
+type QuestPatch = Partial<Pick<DailyQuest, 'title' | 'categoryId' | 'rewardCoins'>>
 type SkillPatch = Partial<Pick<SkillData, 'name' | 'description' | 'categoryId' | 'requiredCoins'>>
+
+export interface NewQuestInput {
+  title: string
+  categoryId: string
+  rewardCoins: number
+}
+
+export interface NewSkillInput {
+  name: string
+  description?: string
+  categoryId: string
+  requiredCoins: number
+  prerequisiteId?: string
+}
 
 export interface SkillMapActions {
   workspace: WorkspaceData
@@ -33,17 +46,16 @@ export interface SkillMapActions {
   addCategory: (name?: string, coinName?: string) => string
   updateCategory: (categoryId: string, patch: CategoryPatch) => void
   deleteCategory: (categoryId: string) => void
-  addQuest: (title?: string, rewardCoins?: number) => string | undefined
+  addQuest: (input: NewQuestInput) => string | undefined
   updateQuest: (questId: string, patch: QuestPatch) => void
   removeQuest: (questId: string) => void
   completeQuest: (questId: string, today?: string) => void
-  addSkill: (position?: XYPosition) => string | undefined
+  addSkill: (input: NewSkillInput) => string | undefined
   updateSkill: (skillId: string, patch: SkillPatch) => void
   unlockSkill: (skillId: string) => void
   removeSkill: (skillId: string) => void
   connectSkills: (connection: Connection) => string | undefined
-  changeNodes: (changes: NodeChange<SkillNode>[]) => void
-  changeEdges: (changes: EdgeChange[]) => void
+  resetWorkspace: () => void
 }
 
 export const useSkillMap = (): SkillMapActions => {
@@ -118,35 +130,40 @@ export const useSkillMap = (): SkillMapActions => {
     })
   }, [])
 
-  const addQuest = useCallback((title = 'New Quest', rewardCoins = 1) => {
+  const addQuest = useCallback((input: NewQuestInput) => {
     const id = makeId('quest')
+    let added = false
     setWorkspace((current) => {
-      if (!current.selectedCategoryId) return current
+      if (!current.categories.some((category) => category.id === input.categoryId)) return current
       const quest: DailyQuest = {
         id,
-        categoryId: current.selectedCategoryId,
-        title,
-        rewardCoins: toNonNegativeInteger(rewardCoins),
+        categoryId: input.categoryId,
+        title: input.title.trim(),
+        rewardCoins: toNonNegativeInteger(input.rewardCoins),
         completedDate: null,
       }
+      added = true
       return { ...current, quests: [...current.quests, quest] }
     })
-    return workspace.selectedCategoryId ? id : undefined
-  }, [workspace.selectedCategoryId])
+    return added ? id : undefined
+  }, [])
 
   const updateQuest = useCallback((questId: string, patch: QuestPatch) => {
-    setWorkspace((current) => ({
-      ...current,
-      quests: current.quests.map((quest) => quest.id === questId
-        ? {
-            ...quest,
-            ...patch,
-            rewardCoins: patch.rewardCoins === undefined
-              ? quest.rewardCoins
-              : toNonNegativeInteger(patch.rewardCoins),
-          }
-        : quest),
-    }))
+    setWorkspace((current) => {
+      if (patch.categoryId && !current.categories.some((category) => category.id === patch.categoryId)) return current
+      return {
+        ...current,
+        quests: current.quests.map((quest) => quest.id === questId
+          ? {
+              ...quest,
+              ...patch,
+              rewardCoins: patch.rewardCoins === undefined
+                ? quest.rewardCoins
+                : toNonNegativeInteger(patch.rewardCoins),
+            }
+          : quest),
+      }
+    })
   }, [])
 
   const removeQuest = useCallback((questId: string) => {
@@ -160,28 +177,33 @@ export const useSkillMap = (): SkillMapActions => {
     setWorkspace((current) => completeDailyQuest(current, questId, today))
   }, [])
 
-  const addSkill = useCallback((position: XYPosition = { x: 160, y: 100 }) => {
+  const addSkill = useCallback((input: NewSkillInput) => {
     const id = makeId('skill')
+    let added = false
     setWorkspace((current) => {
-      if (!current.selectedCategoryId) return current
+      if (!current.categories.some((category) => category.id === input.categoryId)) return current
       const node: SkillNode = {
         id,
         type: 'skill',
-        position,
+        position: { x: 160, y: 100 + current.nodes.length * 40 },
         data: {
           id,
-          name: 'New Skill',
-          description: '',
-          categoryId: current.selectedCategoryId,
-          requiredCoins: 0,
+          name: input.name.trim(),
+          description: input.description?.trim() ?? '',
+          categoryId: input.categoryId,
+          requiredCoins: toNonNegativeInteger(input.requiredCoins),
           status: 'available',
           prerequisiteIds: [],
         },
       }
-      return { ...current, nodes: [...current.nodes, node] }
+      const map = recalculateMap({ nodes: [...current.nodes, node], edges: current.edges }, current.categories)
+      added = true
+      if (!input.prerequisiteId) return { ...current, ...map }
+      const connected = addDependency(map, current.categories, input.prerequisiteId, id)
+      return { ...current, ...connected.map }
     })
-    return workspace.selectedCategoryId ? id : undefined
-  }, [workspace.selectedCategoryId])
+    return added ? id : undefined
+  }, [])
 
   const updateSkill = useCallback((skillId: string, patch: SkillPatch) => {
     setWorkspace((current) => {
@@ -228,37 +250,7 @@ export const useSkillMap = (): SkillMapActions => {
     return result.reason
   }, [workspace])
 
-  const changeNodes = useCallback((changes: NodeChange<SkillNode>[]) => {
-    setWorkspace((current) => {
-      const removedIds = changes.filter((change) => change.type === 'remove').map((change) => change.id)
-      const withoutRemoved = removedIds.reduce(
-        (map, id) => deleteSkill(map, current.categories, id),
-        { nodes: current.nodes, edges: current.edges },
-      )
-      const safeChanges = changes.filter((change) => change.type !== 'remove')
-      return {
-        ...current,
-        ...withoutRemoved,
-        nodes: applyNodeChanges(safeChanges, withoutRemoved.nodes),
-      }
-    })
-  }, [])
-
-  const changeEdges = useCallback((changes: EdgeChange[]) => {
-    setWorkspace((current) => {
-      const removedIds = changes.filter((change) => change.type === 'remove').map((change) => change.id)
-      const withoutRemoved = removedIds.reduce(
-        (map, id) => removeDependency(map, current.categories, id),
-        { nodes: current.nodes, edges: current.edges },
-      )
-      const safeChanges = changes.filter((change) => change.type !== 'remove')
-      return {
-        ...current,
-        ...withoutRemoved,
-        edges: applyEdgeChanges(safeChanges, withoutRemoved.edges),
-      }
-    })
-  }, [])
+  const resetWorkspace = useCallback(() => setWorkspace(createDefaultWorkspace()), [])
 
   return {
     workspace,
@@ -276,7 +268,6 @@ export const useSkillMap = (): SkillMapActions => {
     unlockSkill,
     removeSkill,
     connectSkills,
-    changeNodes,
-    changeEdges,
+    resetWorkspace,
   }
 }

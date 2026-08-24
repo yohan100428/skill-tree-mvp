@@ -1,93 +1,178 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { Connection } from '@xyflow/react'
-import { CategorySidebar } from './components/CategorySidebar'
-import { QuestPanel } from './components/QuestPanel'
-import { SkillEditor } from './components/SkillEditor'
-import { SkillTreeCanvas } from './components/SkillTreeCanvas'
-import { TopBar } from './components/TopBar'
+import { useEffect, useRef, useState } from 'react'
+import { QuestForm } from './components/forms/QuestForm'
+import { SkillForm } from './components/forms/SkillForm'
+import { TreeForm } from './components/forms/TreeForm'
+import { AddActionSheet } from './components/mobile/AddActionSheet'
+import { AppHeader } from './components/mobile/AppHeader'
+import { BottomNavigation } from './components/mobile/BottomNavigation'
+import type { MobilePage } from './components/mobile/BottomNavigation'
+import { QuestActionsSheet } from './components/mobile/QuestActionsSheet'
+import { SettingsSheet } from './components/mobile/SettingsSheet'
+import { SkillBottomSheet } from './components/mobile/SkillBottomSheet'
+import { TodayPage } from './components/mobile/TodayPage'
+import { TreePage } from './components/mobile/TreePage'
 import { useSkillMap } from './hooks/useSkillMap'
+import type { DailyQuest, TreeCategory } from './types/skillTree'
+import { canCompleteQuest, getLocalDate } from './utils/questLogic'
+
+type Sheet =
+  | { type: 'add' }
+  | { type: 'questForm'; questId?: string }
+  | { type: 'questActions'; questId: string }
+  | { type: 'skillForm'; skillId?: string }
+  | { type: 'treeForm' }
+  | { type: 'settings' }
 
 const App = () => {
   const actions = useSkillMap()
+  const [page, setPage] = useState<MobilePage>('today')
+  const [today, setToday] = useState(() => getLocalDate())
+  const [feedback, setFeedback] = useState<string>()
   const [selectedSkillId, setSelectedSkillId] = useState<string>()
-  const [message, setMessage] = useState<string>()
+  const [sheet, setSheet] = useState<Sheet>()
+  const feedbackTimer = useRef<ReturnType<typeof globalThis.setTimeout> | undefined>(undefined)
 
   useEffect(() => {
-    if (selectedSkillId && !actions.workspace.nodes.some((node) => node.id === selectedSkillId)) {
-      setSelectedSkillId(undefined)
-    }
-  }, [actions.workspace.nodes, selectedSkillId])
+    const now = new Date()
+    const nextDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+    const timeout = globalThis.setTimeout(
+      () => setToday(getLocalDate()),
+      nextDay.getTime() - now.getTime() + 25,
+    )
+    return () => globalThis.clearTimeout(timeout)
+  }, [today])
 
-  const selectedNode = actions.workspace.nodes.find((node) => node.id === selectedSkillId)
-  const selectedQuests = useMemo(
-    () => actions.workspace.quests.filter((quest) => quest.categoryId === actions.workspace.selectedCategoryId),
-    [actions.workspace.quests, actions.workspace.selectedCategoryId],
-  )
-  const unlocked = actions.workspace.nodes.filter((node) => node.data.status === 'unlocked').length
+  useEffect(() => () => globalThis.clearTimeout(feedbackTimer.current), [])
 
-  const handleAddSkill = () => {
-    const offset = actions.workspace.nodes.length % 6
-    const id = actions.addSkill({ x: 100 + offset * 38, y: 80 + offset * 34 })
-    if (id) setSelectedSkillId(id)
+  const completeQuest = (quest: DailyQuest, category: TreeCategory) => {
+    if (!canCompleteQuest(quest, today)) return
+    actions.completeQuest(quest.id, today)
+    setFeedback(`+${quest.rewardCoins} ${category.coinName}`)
+    globalThis.clearTimeout(feedbackTimer.current)
+    feedbackTimer.current = globalThis.setTimeout(() => setFeedback(undefined), 1600)
   }
 
-  const handleConnect = (connection: Connection) => {
-    const error = actions.connectSkills(connection)
-    setMessage(error ?? 'Dependency connected.')
+  const navigate = (nextPage: MobilePage) => {
+    setSelectedSkillId(undefined)
+    setSheet(undefined)
+    setPage(nextPage)
   }
 
-  const handleDeleteCategory = (categoryId: string) => {
-    const category = actions.workspace.categories.find((candidate) => candidate.id === categoryId)
-    if (category && window.confirm(`Delete “${category.name}”, its quests, and its skills?`)) {
-      actions.deleteCategory(categoryId)
-    }
-  }
+  const selectedSkill = actions.workspace.nodes.find((skill) => skill.id === selectedSkillId)
+  const sheetQuest = sheet?.type === 'questActions' || sheet?.type === 'questForm'
+    ? actions.workspace.quests.find((quest) => quest.id === sheet.questId)
+    : undefined
+  const sheetSkill = sheet?.type === 'skillForm'
+    ? actions.workspace.nodes.find((skill) => skill.id === sheet.skillId)
+    : undefined
 
   return (
     <main className="app-shell">
-      <CategorySidebar
-        categories={actions.workspace.categories}
-        selectedCategoryId={actions.workspace.selectedCategoryId}
-        onSelect={actions.selectCategory}
-        onAdd={actions.addCategory}
-        onDelete={handleDeleteCategory}
-      >
-        <QuestPanel
-          category={actions.selectedCategory}
-          quests={selectedQuests}
-          onUpdateCategory={(patch) => actions.selectedCategory && actions.updateCategory(actions.selectedCategory.id, patch)}
-          onAddQuest={() => { actions.addQuest() }}
-          onUpdateQuest={actions.updateQuest}
-          onCompleteQuest={actions.completeQuest}
-          onDeleteQuest={actions.removeQuest}
-        />
-      </CategorySidebar>
-      <section className="workspace">
-        <TopBar
-          unlocked={unlocked}
-          total={actions.workspace.nodes.length}
-          message={message}
-          canAddSkill={Boolean(actions.workspace.selectedCategoryId)}
-          onAddSkill={handleAddSkill}
-        />
-        <div className="work-area">
-          <SkillTreeCanvas
-            map={actions.workspace}
-            onNodesChange={actions.changeNodes}
-            onEdgesChange={actions.changeEdges}
-            onConnect={handleConnect}
+      <AppHeader onOpenSettings={() => { setSelectedSkillId(undefined); setSheet({ type: 'settings' }) }} />
+      <div className="page-scroll">
+        {page === 'today' ? (
+          <TodayPage
+            categories={actions.workspace.categories}
+            quests={actions.workspace.quests}
+            skills={actions.workspace.nodes}
+            today={today}
+            onCompleteQuest={completeQuest}
+            onUnlockSkill={actions.unlockSkill}
+            onOpenQuestMenu={(questId) => setSheet({ type: 'questActions', questId })}
+          />
+        ) : (
+          <TreePage
+            categories={actions.workspace.categories}
+            skills={actions.workspace.nodes}
+            selectedCategoryId={actions.workspace.selectedCategoryId}
+            onSelectCategory={actions.selectCategory}
             onSelectSkill={setSelectedSkillId}
           />
-          <SkillEditor
-            node={selectedNode}
-            allNodes={actions.workspace.nodes}
-            categories={actions.workspace.categories}
-            onUpdate={(patch) => selectedNode && actions.updateSkill(selectedNode.id, patch)}
-            onUnlock={() => selectedNode && actions.unlockSkill(selectedNode.id)}
-            onDelete={() => selectedNode && actions.removeSkill(selectedNode.id)}
-          />
-        </div>
-      </section>
+        )}
+      </div>
+      {feedback && <div className="coin-feedback" role="status">{feedback}</div>}
+      <BottomNavigation
+        page={page}
+        onNavigate={navigate}
+        onAdd={() => { setSelectedSkillId(undefined); setSheet({ type: 'add' }) }}
+      />
+
+      {selectedSkill && (
+        <SkillBottomSheet
+          skill={selectedSkill}
+          allSkills={actions.workspace.nodes}
+          categories={actions.workspace.categories}
+          onClose={() => setSelectedSkillId(undefined)}
+          onUnlock={actions.unlockSkill}
+          onEdit={(skillId) => { setSelectedSkillId(undefined); setSheet({ type: 'skillForm', skillId }) }}
+        />
+      )}
+      {sheet?.type === 'add' && (
+        <AddActionSheet
+          onClose={() => setSheet(undefined)}
+          onChoose={(kind) => setSheet({ type: `${kind}Form` } as Sheet)}
+        />
+      )}
+      {sheet?.type === 'questActions' && sheetQuest && (
+        <QuestActionsSheet
+          quest={sheetQuest}
+          onClose={() => setSheet(undefined)}
+          onEdit={() => setSheet({ type: 'questForm', questId: sheetQuest.id })}
+          onDelete={() => {
+            if (window.confirm(`“${sheetQuest.title}” Quest를 삭제할까요?`)) actions.removeQuest(sheetQuest.id)
+            setSheet(undefined)
+          }}
+        />
+      )}
+      {sheet?.type === 'questForm' && (
+        <QuestForm
+          categories={actions.workspace.categories}
+          selectedCategoryId={actions.workspace.selectedCategoryId}
+          quest={sheetQuest}
+          onClose={() => setSheet(undefined)}
+          onSubmit={(input) => {
+            if (sheetQuest) actions.updateQuest(sheetQuest.id, input)
+            else actions.addQuest(input)
+            setPage('today')
+            setSheet(undefined)
+          }}
+        />
+      )}
+      {sheet?.type === 'skillForm' && (
+        <SkillForm
+          categories={actions.workspace.categories}
+          skills={actions.workspace.nodes}
+          selectedCategoryId={actions.workspace.selectedCategoryId}
+          skill={sheetSkill}
+          onClose={() => setSheet(undefined)}
+          onSubmit={(input) => {
+            if (sheetSkill) actions.updateSkill(sheetSkill.id, input)
+            else actions.addSkill(input)
+            actions.selectCategory(input.categoryId)
+            setPage('tree')
+            setSheet(undefined)
+          }}
+        />
+      )}
+      {sheet?.type === 'treeForm' && (
+        <TreeForm
+          onClose={() => setSheet(undefined)}
+          onSubmit={(name, coinName) => {
+            actions.addCategory(name, coinName)
+            setPage('tree')
+            setSheet(undefined)
+          }}
+        />
+      )}
+      {sheet?.type === 'settings' && (
+        <SettingsSheet
+          categories={actions.workspace.categories}
+          onClose={() => setSheet(undefined)}
+          onUpdateCategory={actions.updateCategory}
+          onDeleteCategory={actions.deleteCategory}
+          onReset={() => { actions.resetWorkspace(); setPage('tree'); setSheet(undefined) }}
+        />
+      )}
     </main>
   )
 }

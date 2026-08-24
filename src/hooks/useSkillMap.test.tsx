@@ -21,8 +21,14 @@ describe('useSkillMap', () => {
     let skillId = ''
 
     act(() => { categoryId = result.current.addCategory('Music', 'Music Coin') })
-    act(() => { result.current.addQuest('Practice', 2) })
-    act(() => { skillId = result.current.addSkill({ x: 10, y: 20 })! })
+    act(() => { result.current.addQuest({ title: 'Practice', categoryId, rewardCoins: 2 }) })
+    act(() => {
+      skillId = result.current.addSkill({
+        name: 'Play scales',
+        categoryId,
+        requiredCoins: 3,
+      })!
+    })
     act(() => { result.current.connectSkills({ source: 'fitness-start', target: skillId, sourceHandle: null, targetHandle: null }) })
     act(() => { result.current.deleteCategory(categoryId) })
 
@@ -36,8 +42,13 @@ describe('useSkillMap', () => {
     const { result } = renderHook(() => useSkillMap())
     let skillId = ''
 
-    act(() => { skillId = result.current.addSkill({ x: 10, y: 20 })! })
-    act(() => { result.current.updateSkill(skillId, { requiredCoins: 1 }) })
+    act(() => {
+      skillId = result.current.addSkill({
+        name: 'One coin skill',
+        categoryId: 'fitness',
+        requiredCoins: 1,
+      })!
+    })
     expect(result.current.workspace.nodes.find((node) => node.id === skillId)?.data.status).toBe('locked')
 
     act(() => { result.current.completeQuest('fitness-daily', '2026-08-24') })
@@ -56,5 +67,63 @@ describe('useSkillMap', () => {
     act(() => { result.current.updateSkill('fitness-start', { categoryId: 'missing' }) })
     expect(result.current.workspace.nodes.find((node) => node.id === 'fitness-start')?.data.categoryId)
       .toBe('fitness')
+  })
+
+  it('creates a complete quest for an explicitly selected Tree', () => {
+    const { result } = renderHook(() => useSkillMap())
+    let questId = ''
+
+    act(() => {
+      questId = result.current.addQuest({
+        title: '수학 공부',
+        categoryId: 'study',
+        rewardCoins: 2,
+      })!
+    })
+
+    expect(result.current.workspace.quests.find((quest) => quest.id === questId)).toMatchObject({
+      title: '수학 공부',
+      categoryId: 'study',
+      rewardCoins: 2,
+      completedDate: null,
+    })
+  })
+
+  it('creates a complete skill and preserves its prerequisite as an edge', () => {
+    const { result } = renderHook(() => useSkillMap())
+    let skillId = ''
+
+    act(() => {
+      skillId = result.current.addSkill({
+        name: '운동 30일',
+        description: '매일 운동합니다.',
+        categoryId: 'fitness',
+        requiredCoins: 30,
+        prerequisiteId: 'fitness-3-week',
+      })!
+    })
+
+    expect(result.current.workspace.nodes.find((node) => node.id === skillId)?.data).toMatchObject({
+      name: '운동 30일',
+      description: '매일 운동합니다.',
+      categoryId: 'fitness',
+      requiredCoins: 30,
+      prerequisiteIds: ['fitness-3-week'],
+    })
+    expect(result.current.workspace.edges).toContainEqual(expect.objectContaining({
+      source: 'fitness-3-week',
+      target: skillId,
+    }))
+  })
+
+  it('resets all in-memory changes to fresh demo data', () => {
+    const { result } = renderHook(() => useSkillMap())
+    act(() => { result.current.addCategory('음악', 'Music Coin') })
+
+    act(() => { result.current.resetWorkspace() })
+
+    expect(result.current.workspace.categories.map((category) => category.id)).toEqual(['fitness', 'study'])
+    expect(result.current.workspace.categories.every((category) => category.coins === 0)).toBe(true)
+    expect(result.current.workspace.selectedCategoryId).toBe('fitness')
   })
 })
