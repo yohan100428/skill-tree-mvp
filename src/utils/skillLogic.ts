@@ -1,58 +1,78 @@
-import type { DependencyResult, SkillEdge, SkillNode, SkillTree } from '../types/skillTree'
+import type {
+  DependencyResult,
+  SkillEdge,
+  SkillMap,
+  SkillNode,
+  TreeCategory,
+  UnlockResult,
+} from '../types/skillTree'
 
-const clampInteger = (value: number, minimum: number, maximum?: number): number => {
-  const finiteValue = Number.isFinite(value) ? Math.round(value) : minimum
-  return Math.min(Math.max(finiteValue, minimum), maximum ?? Number.POSITIVE_INFINITY)
-}
+export const toNonNegativeInteger = (value: number): number =>
+  Number.isFinite(value)
+    ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.round(value)))
+    : 0
 
-export const recalculateTree = (tree: SkillTree): SkillTree => {
-  const nodeIds = new Set(tree.nodes.map((node) => node.id))
-  const edges = tree.edges.filter(
+export const recalculateMap = (map: SkillMap, categories: TreeCategory[]): SkillMap => {
+  const nodeIds = new Set(map.nodes.map((node) => node.id))
+  const categoryCoins = new Map(categories.map((category) => [category.id, category.coins]))
+  const edges = map.edges.filter(
     (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target) && edge.source !== edge.target,
   )
-  const completedIds = new Set<string>()
 
-  const normalizedNodes = tree.nodes.map((node): SkillNode => {
-    const maxLevel = clampInteger(node.data.maxLevel, 1)
-    const level = clampInteger(node.data.level, 0, maxLevel)
-    if (node.data.status === 'completed' || level === maxLevel) completedIds.add(node.id)
+  const normalizedNodes = map.nodes.map((node): SkillNode => ({
+    ...node,
+    data: {
+      ...node.data,
+      id: node.id,
+      requiredCoins: toNonNegativeInteger(node.data.requiredCoins),
+      prerequisiteIds: [...new Set(node.data.prerequisiteIds)].filter(
+        (id) => id !== node.id && nodeIds.has(id),
+      ),
+    },
+  }))
+  const unlockedIds = new Set(
+    normalizedNodes.filter((node) => node.data.status === 'unlocked').map((node) => node.id),
+  )
 
-    return {
-      ...node,
-      data: {
-        ...node.data,
-        id: node.id,
-        maxLevel,
-        level,
-        prerequisiteIds: [...new Set(node.data.prerequisiteIds)].filter(
-          (prerequisiteId) => nodeIds.has(prerequisiteId) && prerequisiteId !== node.id,
-        ),
-      },
-    }
-  })
-
-  const nodes = normalizedNodes.map((node): SkillNode => {
-    const { level, maxLevel, prerequisiteIds } = node.data
-    const completed = completedIds.has(node.id)
-    const unlocked = prerequisiteIds.every((id) => completedIds.has(id))
-    const status = completed
-      ? 'completed'
-      : unlocked
-        ? level > 0
-          ? 'in-progress'
-          : 'available'
-        : 'locked'
-
-    return { ...node, data: { ...node.data, level: completed ? maxLevel : level, status } }
-  })
-
-  return { ...tree, nodes, edges }
+  return {
+    edges,
+    nodes: normalizedNodes.map((node): SkillNode => {
+      if (unlockedIds.has(node.id)) return node
+      const coins = categoryCoins.get(node.data.categoryId)
+      const hasCoins = coins !== undefined && coins >= node.data.requiredCoins
+      const hasPrerequisites = node.data.prerequisiteIds.every((id) => unlockedIds.has(id))
+      return {
+        ...node,
+        data: { ...node.data, status: hasCoins && hasPrerequisites ? 'available' : 'locked' },
+      }
+    }),
+  }
 }
 
-export const wouldCreateCycle = (tree: SkillTree, source: string, target: string): boolean => {
+export const unlockSkill = (
+  map: SkillMap,
+  categories: TreeCategory[],
+  skillId: string,
+): UnlockResult => {
+  const current = recalculateMap(map, categories)
+  const skill = current.nodes.find((node) => node.id === skillId)
+  if (!skill || skill.data.status !== 'available') return { map: current, changed: false }
+
+  return {
+    changed: true,
+    map: recalculateMap({
+      ...current,
+      nodes: current.nodes.map((node) => node.id === skillId
+        ? { ...node, data: { ...node.data, status: 'unlocked' } }
+        : node),
+    }, categories),
+  }
+}
+
+export const wouldCreateCycle = (map: SkillMap, source: string, target: string): boolean => {
   if (source === target) return true
   const outgoing = new Map<string, string[]>()
-  tree.edges.forEach((edge) => {
+  map.edges.forEach((edge) => {
     outgoing.set(edge.source, [...(outgoing.get(edge.source) ?? []), edge.target])
   })
 
@@ -68,16 +88,21 @@ export const wouldCreateCycle = (tree: SkillTree, source: string, target: string
   return false
 }
 
-export const addDependency = (tree: SkillTree, source: string, target: string): DependencyResult => {
-  if (source === target) return { tree, changed: false, reason: 'A skill cannot depend on itself.' }
-  if (!tree.nodes.some((node) => node.id === source) || !tree.nodes.some((node) => node.id === target)) {
-    return { tree, changed: false, reason: 'One of these skills no longer exists.' }
+export const addDependency = (
+  map: SkillMap,
+  categories: TreeCategory[],
+  source: string,
+  target: string,
+): DependencyResult => {
+  if (source === target) return { map, changed: false, reason: 'A skill cannot depend on itself.' }
+  if (!map.nodes.some((node) => node.id === source) || !map.nodes.some((node) => node.id === target)) {
+    return { map, changed: false, reason: 'One of these skills no longer exists.' }
   }
-  if (tree.edges.some((edge) => edge.source === source && edge.target === target)) {
-    return { tree, changed: false, reason: 'These skills are already connected.' }
+  if (map.edges.some((edge) => edge.source === source && edge.target === target)) {
+    return { map, changed: false, reason: 'These skills are already connected.' }
   }
-  if (wouldCreateCycle(tree, source, target)) {
-    return { tree, changed: false, reason: 'This connection would create a cycle.' }
+  if (wouldCreateCycle(map, source, target)) {
+    return { map, changed: false, reason: 'This connection would create a cycle.' }
   }
 
   const edge: SkillEdge = {
@@ -87,46 +112,47 @@ export const addDependency = (tree: SkillTree, source: string, target: string): 
     type: 'smoothstep',
     animated: true,
   }
-  const nodes = tree.nodes.map((node) =>
-    node.id === target
-      ? { ...node, data: { ...node.data, prerequisiteIds: [...node.data.prerequisiteIds, source] } }
-      : node,
-  )
-  return { tree: recalculateTree({ ...tree, nodes, edges: [...tree.edges, edge] }), changed: true }
+  const nodes = map.nodes.map((node) => node.id === target
+    ? { ...node, data: { ...node.data, prerequisiteIds: [...node.data.prerequisiteIds, source] } }
+    : node)
+  return { map: recalculateMap({ nodes, edges: [...map.edges, edge] }, categories), changed: true }
 }
 
-export const removeDependency = (tree: SkillTree, edgeId: string): SkillTree => {
-  const removed = tree.edges.find((edge) => edge.id === edgeId)
-  if (!removed) return recalculateTree(tree)
+export const removeDependency = (
+  map: SkillMap,
+  categories: TreeCategory[],
+  edgeId: string,
+): SkillMap => {
+  const removed = map.edges.find((edge) => edge.id === edgeId)
+  if (!removed) return recalculateMap(map, categories)
 
-  return recalculateTree({
-    ...tree,
-    edges: tree.edges.filter((edge) => edge.id !== edgeId),
-    nodes: tree.nodes.map((node) =>
-      node.id === removed.target
-        ? {
-            ...node,
-            data: {
-              ...node.data,
-              prerequisiteIds: node.data.prerequisiteIds.filter((id) => id !== removed.source),
-            },
-          }
-        : node,
-    ),
-  })
+  return recalculateMap({
+    edges: map.edges.filter((edge) => edge.id !== edgeId),
+    nodes: map.nodes.map((node) => node.id === removed.target
+      ? {
+          ...node,
+          data: {
+            ...node.data,
+            prerequisiteIds: node.data.prerequisiteIds.filter((id) => id !== removed.source),
+          },
+        }
+      : node),
+  }, categories)
 }
 
-export const deleteSkill = (tree: SkillTree, skillId: string): SkillTree =>
-  recalculateTree({
-    ...tree,
-    nodes: tree.nodes
-      .filter((node) => node.id !== skillId)
-      .map((node) => ({
-        ...node,
-        data: {
-          ...node.data,
-          prerequisiteIds: node.data.prerequisiteIds.filter((id) => id !== skillId),
-        },
-      })),
-    edges: tree.edges.filter((edge) => edge.source !== skillId && edge.target !== skillId),
-  })
+export const deleteSkill = (
+  map: SkillMap,
+  categories: TreeCategory[],
+  skillId: string,
+): SkillMap => recalculateMap({
+  nodes: map.nodes
+    .filter((node) => node.id !== skillId)
+    .map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        prerequisiteIds: node.data.prerequisiteIds.filter((id) => id !== skillId),
+      },
+    })),
+  edges: map.edges.filter((edge) => edge.source !== skillId && edge.target !== skillId),
+}, categories)

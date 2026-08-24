@@ -1,35 +1,54 @@
 import type { Edge, Node } from '@xyflow/react'
 
-export type SkillStatus = 'locked' | 'available' | 'in-progress' | 'completed'
+export type SkillStatus = 'locked' | 'available' | 'unlocked'
+
+export interface TreeCategory {
+  id: string
+  name: string
+  coinName: string
+  coins: number
+}
+
+export interface DailyQuest {
+  id: string
+  categoryId: string
+  title: string
+  rewardCoins: number
+  completedDate: string | null
+}
 
 export type SkillData = Record<string, unknown> & {
   id: string
   name: string
   description: string
-  level: number
-  maxLevel: number
-  status: SkillStatus
+  categoryId: string
+  requiredCoins: number
   prerequisiteIds: string[]
+  status: SkillStatus
 }
 
 export type SkillNode = Node<SkillData, 'skill'>
 export type SkillEdge = Edge
 
-export interface SkillTree {
-  id: string
-  name: string
+export interface SkillMap {
   nodes: SkillNode[]
   edges: SkillEdge[]
 }
 
-export interface WorkspaceData {
-  version: 1
-  activeTreeId: string
-  trees: SkillTree[]
+export interface WorkspaceData extends SkillMap {
+  version: 2
+  categories: TreeCategory[]
+  quests: DailyQuest[]
+  selectedCategoryId: string | null
 }
 
 export interface DependencyResult {
-  tree: SkillTree
+  map: SkillMap
   changed: boolean
   reason?: string
+}
+
+export interface UnlockResult {
+  map: SkillMap
+  changed: boolean
 }

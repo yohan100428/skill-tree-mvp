@@ -1,26 +1,19 @@
 interface TopBarProps {
-  treeName: string
-  completed: number
+  unlocked: number
   total: number
-  level: number
-  maxLevel: number
   message?: string
-  onRename: (name: string) => void
+  canAddSkill: boolean
   onAddSkill: () => void
 }
 
-export const TopBar = ({ treeName, completed, total, level, maxLevel, message, onRename, onAddSkill }: TopBarProps) => (
+export const TopBar = ({ unlocked, total, message, canAddSkill, onAddSkill }: TopBarProps) => (
   <header className="topbar">
-    <label className="tree-name-field">
-      <span>Tree Name</span>
-      <input aria-label="Tree Name" value={treeName} onChange={(event) => onRename(event.target.value)} />
-    </label>
-    {message && <p className="notice" role="status">{message}</p>}
-    <div className="overall">
-      <span>Overall</span>
-      <strong>{completed}/{total} complete</strong>
-      <small>Lv. {level}/{maxLevel}</small>
+    <div>
+      <span className="eyebrow">One map · many branches</span>
+      <h1>MY SKILL TREE</h1>
     </div>
-    <button type="button" className="primary-button" onClick={onAddSkill}>+ Add Skill</button>
+    {message && <p className="notice" role="status">{message}</p>}
+    <div className="overall"><span>Progress</span><strong>{unlocked}/{total} unlocked</strong></div>
+    <button type="button" className="primary-button" disabled={!canAddSkill} onClick={onAddSkill}>+ Add Skill</button>
   </header>
 )
