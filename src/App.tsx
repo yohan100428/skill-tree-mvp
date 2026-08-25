@@ -14,6 +14,7 @@ import { TreePage } from './components/mobile/TreePage'
 import { useSkillMap } from './hooks/useSkillMap'
 import type { DailyQuest, TreeCategory } from './types/skillTree'
 import { canCompleteQuest, getLocalDate } from './utils/questLogic'
+import { STORAGE_KEY } from './utils/storage'
 
 type Sheet =
   | { type: 'add' }
@@ -25,7 +26,7 @@ type Sheet =
 
 const App = () => {
   const actions = useSkillMap()
-  const [page, setPage] = useState<MobilePage>('tree')
+  const [page, setPage] = useState<MobilePage>('today')
   const [today, setToday] = useState(() => getLocalDate())
   const [feedback, setFeedback] = useState<string>()
   const [selectedSkillId, setSelectedSkillId] = useState<string>()
@@ -43,6 +44,22 @@ const App = () => {
   }, [today])
 
   useEffect(() => () => globalThis.clearTimeout(feedbackTimer.current), [])
+
+  useEffect(() => {
+    const clearCachedWorkspace = (event: KeyboardEvent) => {
+      if (event.key !== 'F1') return
+      event.preventDefault()
+      localStorage.removeItem(STORAGE_KEY)
+      actions.resetWorkspace()
+      globalThis.clearTimeout(feedbackTimer.current)
+      setFeedback(undefined)
+      setSelectedSkillId(undefined)
+      setSheet(undefined)
+      setPage('today')
+    }
+    window.addEventListener('keydown', clearCachedWorkspace)
+    return () => window.removeEventListener('keydown', clearCachedWorkspace)
+  }, [actions.resetWorkspace])
 
   const completeQuest = (quest: DailyQuest, category: TreeCategory) => {
     if (!canCompleteQuest(quest, today)) return
@@ -180,7 +197,7 @@ const App = () => {
           onClose={() => setSheet(undefined)}
           onUpdateCategory={actions.updateCategory}
           onDeleteCategory={actions.deleteCategory}
-          onReset={() => { actions.resetWorkspace(); setPage('tree'); setSheet(undefined) }}
+          onReset={() => { actions.resetWorkspace(); setPage('today'); setSheet(undefined) }}
         />
       )}
     </main>

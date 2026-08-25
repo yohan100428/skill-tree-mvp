@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import App from './App'
 import { createLegacyDemoWorkspace } from './data/defaultTree'
-import { saveWorkspace } from './utils/storage'
+import { loadWorkspace, saveWorkspace } from './utils/storage'
 
 describe('mobile skill tree app', () => {
   beforeEach(() => {
@@ -19,15 +19,39 @@ describe('mobile skill tree app', () => {
     vi.restoreAllMocks()
   })
 
-  it('opens a fresh workspace on Tree with only the ME root', () => {
+  it('opens a fresh workspace on Today and keeps only ME in Tree', () => {
     localStorage.clear()
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'TREE' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'TODAY' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
     const map = screen.getByRole('region', { name: 'ME growth map' })
     expect(within(map).getByTestId('me-root')).toHaveTextContent('ME')
     expect(within(map).queryByTestId(/^skill-node-/)).not.toBeInTheDocument()
     expect(screen.queryByRole('tablist', { name: 'Tree selection' })).not.toBeInTheDocument()
+  })
+
+  it('clears cached workspace data with F1 and returns to Today', () => {
+    render(<App />)
+    expect(screen.getByTestId('quest-group-fitness')).toBeInTheDocument()
+
+    const event = new KeyboardEvent('keydown', { key: 'F1', bubbles: true, cancelable: true })
+    fireEvent(window, event)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(screen.getByRole('heading', { name: 'TODAY' })).toBeInTheDocument()
+    expect(screen.queryByTestId('quest-group-fitness')).not.toBeInTheDocument()
+    expect(screen.getByText('0 / 0')).toBeInTheDocument()
+    expect(loadWorkspace(localStorage)).toMatchObject({
+      selectedCategoryId: null,
+      categories: [],
+      quests: [],
+      nodes: [],
+      edges: [],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
+    expect(screen.getByTestId('me-root')).toHaveTextContent('ME')
   })
 
   it('offers Tree creation first when a fresh workspace has no categories', () => {
@@ -167,6 +191,8 @@ describe('mobile skill tree app', () => {
     expect(within(settings).getByText('Manage Trees')).toBeInTheDocument()
     fireEvent.click(within(settings).getByRole('button', { name: 'Reset All Data' }))
 
+    expect(screen.getByRole('heading', { name: 'TODAY' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
     expect(screen.getByTestId('me-root')).toHaveTextContent('ME')
     expect(screen.queryByTestId(/^skill-node-/)).not.toBeInTheDocument()
   })
