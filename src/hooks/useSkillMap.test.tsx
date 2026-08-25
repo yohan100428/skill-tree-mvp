@@ -123,6 +123,30 @@ describe('useSkillMap', () => {
     }))
   })
 
+  it('places newly created skills outward along their category branch', () => {
+    localStorage.clear()
+    const { result } = renderHook(() => useSkillMap())
+    let categoryId = ''
+
+    act(() => { categoryId = result.current.addCategory('운동', 'Fitness Coin') })
+    act(() => {
+      result.current.addSkill({ name: '운동 시작', categoryId, requiredCoins: 0 })
+    })
+    const rootSkill = result.current.workspace.nodes.find((node) => node.data.name === '운동 시작')!
+    act(() => {
+      result.current.addSkill({
+        name: '운동 30일',
+        categoryId,
+        requiredCoins: 30,
+        prerequisiteId: rootSkill.id,
+      })
+    })
+    const dependentSkill = result.current.workspace.nodes.find((node) => node.data.name === '운동 30일')!
+
+    expect(rootSkill.position).toEqual({ x: 0, y: 480 })
+    expect(dependentSkill.position).toEqual({ x: 0, y: 700 })
+  })
+
   it('persists node positions changed on the Tree canvas', () => {
     const { result } = renderHook(() => useSkillMap())
 

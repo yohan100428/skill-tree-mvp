@@ -203,7 +203,7 @@ button:disabled { cursor: default; }
 .react-flow__controls-button:hover { background: #1e293b; }
 .react-flow__controls-button svg { fill: currentColor; }
 .react-flow__minimap { border: 1px solid #334155; border-radius: 10px; background: #0f172a; }
-.empty-canvas { position: absolute; top: 50%; left: 50%; display: flex; flex-direction: column; gap: 5px; width: 80%; color: #64748b; text-align: center; transform: translate(-50%, -50%); pointer-events: none; }
+.empty-canvas { position: absolute; bottom: 28px; left: 50%; display: flex; flex-direction: column; gap: 5px; width: min(66%, 280px); color: #64748b; text-align: center; transform: translateX(-50%); pointer-events: none; }
 .empty-canvas strong { color: #94a3b8; }
 .skill-node { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; width: 164px; padding: 15px 12px 13px; border: 2px solid #64748b; border-radius: 12px; color: #cbd5e1; background: #172033; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32); text-align: center; }
 .skill-node strong { max-width: 100%; overflow: hidden; color: #f1f5f9; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }

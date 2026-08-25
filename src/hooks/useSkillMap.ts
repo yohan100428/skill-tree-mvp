@@ -19,6 +19,7 @@ import {
 import { completeDailyQuest } from '../utils/questLogic'
 import { loadWorkspace, saveWorkspace } from '../utils/storage'
 import { createDefaultWorkspace } from '../data/defaultTree'
+import { getSuggestedSkillPosition } from '../utils/personalTree'
 
 const makeId = (prefix: string): string =>
   `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`
@@ -189,7 +190,7 @@ export const useSkillMap = (): SkillMapActions => {
       const node: SkillNode = {
         id,
         type: 'skill',
-        position: { x: 160, y: 100 + current.nodes.length * 40 },
+        position: getSuggestedSkillPosition(current, input.categoryId, input.prerequisiteId),
         data: {
           id,
           name: input.name.trim(),

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createDefaultWorkspace } from '../data/defaultTree'
 import type { SkillNode, WorkspaceData } from '../types/skillTree'
-import { buildPersonalTree } from './personalTree'
+import { buildPersonalTree, getCategoryPosition, getSuggestedSkillPosition } from './personalTree'
 
 const skill = (
   id: string,
@@ -73,5 +73,20 @@ describe('personal skill map graph', () => {
       ['personal-category:fitness', 'fitness-start'],
       ['fitness-start', 'fitness-30-days'],
     ])
+  })
+
+  it('places a new skill farther outward along its category branch', () => {
+    const workspace: WorkspaceData = {
+      ...createDefaultWorkspace(),
+      selectedCategoryId: 'fitness',
+      categories: [{ id: 'fitness', name: '운동', coinName: 'Fitness Coin', coins: 0 }],
+    }
+    const categoryPosition = getCategoryPosition(workspace.categories, 'fitness')
+    const rootPosition = getSuggestedSkillPosition(workspace, 'fitness')
+    const withRoot = { ...workspace, nodes: [{ ...skill('fitness-start', 'fitness'), position: rootPosition }] }
+
+    expect(categoryPosition).toEqual({ x: 0, y: 260 })
+    expect(rootPosition).toEqual({ x: 0, y: 480 })
+    expect(getSuggestedSkillPosition(withRoot, 'fitness', 'fitness-start')).toEqual({ x: 0, y: 700 })
   })
 })
