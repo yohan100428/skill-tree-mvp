@@ -47,7 +47,13 @@ const App = () => {
 
   useEffect(() => {
     const clearCachedWorkspace = (event: KeyboardEvent) => {
-      if (event.key !== 'F1') return
+      if (event.key.toLowerCase() !== 'r') return
+      if (event.ctrlKey || event.metaKey || event.altKey) return
+      const target = event.target
+      if (
+        target instanceof HTMLElement
+        && (target.matches('input, textarea, select') || target.isContentEditable)
+      ) return
       event.preventDefault()
       localStorage.removeItem(STORAGE_KEY)
       actions.resetWorkspace()

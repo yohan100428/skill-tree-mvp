@@ -31,11 +31,11 @@ describe('mobile skill tree app', () => {
     expect(screen.queryByRole('tablist', { name: 'Tree selection' })).not.toBeInTheDocument()
   })
 
-  it('clears cached workspace data with F1 and returns to Today', () => {
+  it('clears cached workspace data with R and returns to Today', () => {
     render(<App />)
     expect(screen.getByTestId('quest-group-fitness')).toBeInTheDocument()
 
-    const event = new KeyboardEvent('keydown', { key: 'F1', bubbles: true, cancelable: true })
+    const event = new KeyboardEvent('keydown', { key: 'r', bubbles: true, cancelable: true })
     fireEvent(window, event)
 
     expect(event.defaultPrevented).toBe(true)
@@ -52,6 +52,35 @@ describe('mobile skill tree app', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
     expect(screen.getByTestId('me-root')).toHaveTextContent('ME')
+  })
+
+  it('does not reset while R is typed in a form field', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: '무엇을 추가할까요?' })).getByRole('button', { name: 'Daily Quest' }))
+
+    const form = screen.getByRole('dialog', { name: 'NEW QUEST' })
+    const input = within(form).getByRole('textbox', { name: '퀘스트' })
+    const event = new KeyboardEvent('keydown', { key: 'r', bubbles: true, cancelable: true })
+    fireEvent(input, event)
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(form).toBeInTheDocument()
+    expect(screen.getByTestId('quest-group-fitness')).toBeInTheDocument()
+  })
+
+  it('keeps the browser refresh shortcut available', () => {
+    render(<App />)
+    const event = new KeyboardEvent('keydown', {
+      key: 'r',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    fireEvent(window, event)
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(screen.getByTestId('quest-group-fitness')).toBeInTheDocument()
   })
 
   it('offers Tree creation first when a fresh workspace has no categories', () => {
