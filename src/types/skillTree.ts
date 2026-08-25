@@ -30,6 +30,24 @@ export type SkillData = Record<string, unknown> & {
 export type SkillNode = Node<SkillData, 'skill'>
 export type SkillEdge = Edge
 
+export type MeNode = Node<Record<string, unknown> & {
+  label: 'ME'
+}, 'me'>
+
+export type CategoryNode = Node<Record<string, unknown> & {
+  categoryId: string
+  name: string
+  coinName: string
+  coins: number
+}, 'category'>
+
+export type PersonalTreeNode = MeNode | CategoryNode | SkillNode
+
+export interface PersonalTreeMap {
+  nodes: PersonalTreeNode[]
+  edges: SkillEdge[]
+}
+
 export interface SkillMap {
   nodes: SkillNode[]
   edges: SkillEdge[]
