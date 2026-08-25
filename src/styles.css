@@ -142,6 +142,7 @@ button:disabled { cursor: default; }
 .tree-tabs button[aria-selected="true"] { color: #f5f7ff; border-color: #7898e7; background: #24314e; }
 .tree-balance { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding: 13px 16px; color: #8faaf0; font-size: 12px; }
 .tree-balance strong { color: #f5f7ff; font-size: 18px; }
+.tree-balance--summary { margin-bottom: 12px; }
 .tree-canvas {
   width: 100%;
   height: max(440px, calc(100dvh - 300px));
@@ -150,21 +151,6 @@ button:disabled { cursor: default; }
   border-radius: 18px;
   background: #080d17;
   box-shadow: inset 0 0 36px rgba(0, 0, 0, 0.22), 0 10px 26px rgba(0, 0, 0, 0.16);
-}
-.me-growth-map {
-  position: relative;
-  display: grid;
-  place-items: start center;
-  width: 100%;
-  height: max(440px, calc(100dvh - 220px));
-  padding-top: 42px;
-  overflow: hidden;
-  border: 1px solid #252d3d;
-  border-radius: 18px;
-  background-color: #080d17;
-  background-image: radial-gradient(circle, #273248 1.2px, transparent 1.2px);
-  background-size: 24px 24px;
-  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.28), 0 10px 26px rgba(0, 0, 0, 0.16);
 }
 .me-root {
   display: grid;
@@ -192,6 +178,24 @@ button:disabled { cursor: default; }
 }
 .me-root strong { font-size: 18px; letter-spacing: 0.1em; }
 .me-root span { color: #7fc5b0; font-size: 9px; font-weight: 900; letter-spacing: 0.16em; }
+.category-node {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  width: 150px;
+  padding: 16px 14px;
+  border: 2px solid #a78bfa;
+  border-radius: 999px;
+  color: #f5f3ff;
+  background: linear-gradient(150deg, #302651, #18172c);
+  box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.08), 0 12px 28px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+.category-node small { color: #c4b5fd; font-size: 8px; font-weight: 900; letter-spacing: 0.18em; }
+.category-node strong { max-width: 100%; overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.category-node span { color: #a8a2c7; font-size: 10px; }
+.branch-handle { width: 10px; height: 10px; border: 2px solid #e2e8f0; background: #64748b; pointer-events: none; }
 .react-flow__edge-path { stroke: #64748b; stroke-width: 2; }
 .react-flow__edge.selected .react-flow__edge-path { stroke: #fbbf24; }
 .react-flow__controls { overflow: hidden; border: 1px solid #334155; border-radius: 10px; box-shadow: none; }

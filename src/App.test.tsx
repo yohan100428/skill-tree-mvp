@@ -25,8 +25,9 @@ describe('mobile skill tree app', () => {
 
     expect(screen.getByRole('heading', { name: 'TODAY' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
-    const map = screen.getByRole('region', { name: 'ME growth map' })
+    const map = screen.getByRole('region', { name: 'ME personal skill map canvas' })
     expect(within(map).getByTestId('me-root')).toHaveTextContent('ME')
+    expect(within(map).queryByTestId(/^category-node-/)).not.toBeInTheDocument()
     expect(within(map).queryByTestId(/^skill-node-/)).not.toBeInTheDocument()
     expect(screen.queryByRole('tablist', { name: 'Tree selection' })).not.toBeInTheDocument()
   })
@@ -126,18 +127,19 @@ describe('mobile skill tree app', () => {
       .toEqual(['Today', 'Tree', '+'])
   })
 
-  it('shows the selected Tree on a free-position canvas and opens skill details', () => {
+  it('shows every category and skill on one ME-centered personal skill map', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
 
     expect(screen.getByRole('heading', { name: 'TREE' })).toBeInTheDocument()
-    const tabs = screen.getByRole('tablist', { name: 'Tree selection' })
-    expect(within(tabs).getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['운동', '공부'])
-
-    const canvas = screen.getByRole('region', { name: '운동 skill tree canvas' })
+    expect(screen.queryByRole('tablist', { name: 'Tree selection' })).not.toBeInTheDocument()
+    const canvas = screen.getByRole('region', { name: 'ME personal skill map canvas' })
+    expect(within(canvas).getByTestId('me-root')).toBeInTheDocument()
+    expect(within(canvas).getByTestId('category-node-fitness')).toHaveTextContent('운동')
+    expect(within(canvas).getByTestId('category-node-study')).toHaveTextContent('공부')
     expect(within(canvas).getByTestId('skill-node-fitness-start')).toBeInTheDocument()
     expect(within(canvas).getByTestId('skill-node-fitness-3-week')).toBeInTheDocument()
-    expect(within(canvas).queryByTestId('skill-node-study-start')).not.toBeInTheDocument()
+    expect(within(canvas).getByTestId('skill-node-study-start')).toBeInTheDocument()
     fireEvent.click(within(canvas).getByTestId('skill-node-fitness-start'))
 
     const details = screen.getByRole('dialog', { name: '운동 시작' })
@@ -174,10 +176,10 @@ describe('mobile skill tree app', () => {
     fireEvent.click(within(form).getByRole('button', { name: '만들기' }))
 
     expect(screen.getByRole('heading', { name: 'TREE' })).toBeInTheDocument()
-    expect(within(screen.getByRole('region', { name: '운동 skill tree canvas' })).getByTestId(/^skill-node-skill-/)).toHaveTextContent('아침 러닝')
+    expect(within(screen.getByRole('region', { name: 'ME personal skill map canvas' })).getByTestId(/^skill-node-skill-/)).toHaveTextContent('아침 러닝')
   })
 
-  it('creates a Tree with an automatic coin name and makes it selectable', () => {
+  it('creates a category branch with an automatic coin name', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Add' }))
     fireEvent.click(within(screen.getByRole('dialog', { name: '무엇을 추가할까요?' })).getByRole('button', { name: 'Tree' }))
@@ -186,8 +188,9 @@ describe('mobile skill tree app', () => {
     fireEvent.change(within(form).getByRole('textbox', { name: '트리 이름' }), { target: { value: '독서' } })
     fireEvent.click(within(form).getByRole('button', { name: '만들기' }))
 
-    expect(screen.getByRole('tab', { name: '독서' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByText('독서 Coin')).toBeInTheDocument()
+    const canvas = screen.getByRole('region', { name: 'ME personal skill map canvas' })
+    expect(within(canvas).getByTestId(/^category-node-category-/)).toHaveTextContent('독서')
+    expect(within(canvas).getByTestId(/^category-node-category-/)).toHaveTextContent('독서 Coin')
   })
 
   it('edits a quest through its explicit menu', () => {
@@ -222,8 +225,10 @@ describe('mobile skill tree app', () => {
 
     expect(screen.getByRole('heading', { name: 'TODAY' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
-    expect(screen.getByTestId('me-root')).toHaveTextContent('ME')
-    expect(screen.queryByTestId(/^skill-node-/)).not.toBeInTheDocument()
+    const canvas = screen.getByRole('region', { name: 'ME personal skill map canvas' })
+    expect(within(canvas).getByTestId('me-root')).toHaveTextContent('ME')
+    expect(within(canvas).queryByTestId(/^category-node-/)).not.toBeInTheDocument()
+    expect(within(canvas).queryByTestId(/^skill-node-/)).not.toBeInTheDocument()
   })
 
   it('deletes a selected canvas node from its mobile detail sheet', () => {

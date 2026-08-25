@@ -107,8 +107,6 @@ const App = () => {
           <TreePage
             categories={actions.workspace.categories}
             workspace={actions.workspace}
-            selectedCategoryId={actions.workspace.selectedCategoryId}
-            onSelectCategory={actions.selectCategory}
             onSelectSkill={setSelectedSkillId}
             onNodesChange={actions.changeNodes}
             onEdgesChange={actions.changeEdges}
