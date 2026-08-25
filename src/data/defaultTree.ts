@@ -50,7 +50,7 @@ const demoEdge = (source: string, target: string): SkillEdge => ({
   animated: true,
 })
 
-export const createDefaultWorkspace = (): WorkspaceData => {
+export const createLegacyDemoWorkspace = (): WorkspaceData => {
   const nodes = [
     demoNode('fitness-start', '운동 시작', 'fitness', 0, 150, 30),
     demoNode('fitness-3-week', '주 3회 운동', 'fitness', 5, 150, 190, ['fitness-start']),
@@ -77,3 +77,12 @@ export const createDefaultWorkspace = (): WorkspaceData => {
     ...map,
   }
 }
+
+export const createDefaultWorkspace = (): WorkspaceData => ({
+  version: 2,
+  selectedCategoryId: null,
+  categories: [],
+  quests: [],
+  nodes: [],
+  edges: [],
+})

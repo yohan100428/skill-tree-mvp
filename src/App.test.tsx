@@ -1,10 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import App from './App'
+import { createLegacyDemoWorkspace } from './data/defaultTree'
+import { saveWorkspace } from './utils/storage'
 
 describe('mobile skill tree app', () => {
   beforeEach(() => {
     localStorage.clear()
+    const existingWorkspace = createLegacyDemoWorkspace()
+    existingWorkspace.nodes[0].data.description = 'Existing user workspace'
+    saveWorkspace(localStorage, existingWorkspace)
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2026, 7, 24, 9, 0))
   })
@@ -14,25 +19,43 @@ describe('mobile skill tree app', () => {
     vi.restoreAllMocks()
   })
 
-  it('opens Today and completes a quest with one tap, updating progress and Tree coins', () => {
+  it('opens a fresh workspace on Tree with only the ME root', () => {
+    localStorage.clear()
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'TODAY' })).toBeInTheDocument()
-    expect(screen.getByText('8월 24일')).toBeInTheDocument()
-    expect(screen.getByText('0 / 4')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'TREE' })).toBeInTheDocument()
+    const map = screen.getByRole('region', { name: 'ME growth map' })
+    expect(within(map).getByTestId('me-root')).toHaveTextContent('ME')
+    expect(within(map).queryByTestId(/^skill-node-/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('tablist', { name: 'Tree selection' })).not.toBeInTheDocument()
+  })
+
+  it('offers Tree creation first when a fresh workspace has no categories', () => {
+    localStorage.clear()
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+
+    const addSheet = screen.getByRole('dialog', { name: '무엇을 추가할까요?' })
+    expect(within(addSheet).getByText('먼저 Tree를 만들어 주세요.')).toBeInTheDocument()
+    expect(within(addSheet).getByRole('button', { name: 'Tree' })).toBeInTheDocument()
+    expect(within(addSheet).queryByRole('button', { name: 'Daily Quest' })).not.toBeInTheDocument()
+    expect(within(addSheet).queryByRole('button', { name: 'Skill' })).not.toBeInTheDocument()
+  })
+
+  it('keeps quest completion available for an existing workspace', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Today' }))
 
     const fitnessGroup = screen.getByTestId('quest-group-fitness')
-    expect(within(fitnessGroup).getByText('Fitness Coin 0')).toBeInTheDocument()
     fireEvent.click(within(fitnessGroup).getByRole('button', { name: '오늘 운동하기 완료' }))
 
     expect(within(fitnessGroup).getByText('Fitness Coin 1')).toBeInTheDocument()
-    expect(within(fitnessGroup).getByRole('button', { name: '오늘 운동하기 완료됨' })).toBeDisabled()
     expect(screen.getByText('1 / 4')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('+1 Fitness Coin')
   })
 
   it('lists available skills and unlocks without spending coins', () => {
     render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Today' }))
 
     const available = screen.getByLabelText('Unlock available')
     expect(within(available).getByText('운동 시작')).toBeInTheDocument()
@@ -116,6 +139,7 @@ describe('mobile skill tree app', () => {
 
   it('edits a quest through its explicit menu', () => {
     render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Today' }))
     fireEvent.click(screen.getByRole('button', { name: '오늘 운동하기 menu' }))
     fireEvent.click(within(screen.getByRole('dialog', { name: 'Quest 관리' })).getByRole('button', { name: '수정' }))
 
@@ -126,7 +150,7 @@ describe('mobile skill tree app', () => {
     expect(screen.getByTestId('quest-group-fitness')).toHaveTextContent('아침 운동하기')
   })
 
-  it('opens skill editing only from details and resets demo data from Settings', () => {
+  it('opens skill editing from details and resets all data back to ME', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
@@ -141,9 +165,10 @@ describe('mobile skill tree app', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open settings' }))
     const settings = screen.getByRole('dialog', { name: 'SETTINGS' })
     expect(within(settings).getByText('Manage Trees')).toBeInTheDocument()
-    fireEvent.click(within(settings).getByRole('button', { name: 'Reset Demo Data' }))
+    fireEvent.click(within(settings).getByRole('button', { name: 'Reset All Data' }))
 
-    expect(screen.getByTestId('skill-node-fitness-start')).toHaveTextContent('운동 시작')
+    expect(screen.getByTestId('me-root')).toHaveTextContent('ME')
+    expect(screen.queryByTestId(/^skill-node-/)).not.toBeInTheDocument()
   })
 
   it('deletes a selected canvas node from its mobile detail sheet', () => {

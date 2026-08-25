@@ -1,4 +1,4 @@
-import { createDefaultWorkspace } from '../data/defaultTree'
+import { createDefaultWorkspace, createLegacyDemoWorkspace } from '../data/defaultTree'
 import type {
   DailyQuest,
   SkillData,
@@ -157,11 +157,42 @@ const parseWorkspace = (value: unknown): WorkspaceData | null => {
   }
 }
 
+const workspaceContentSignature = (workspace: WorkspaceData): string => JSON.stringify({
+  selectedCategoryId: workspace.selectedCategoryId,
+  categories: workspace.categories.map(({ id, name, coinName, coins }) => ({ id, name, coinName, coins })),
+  quests: workspace.quests.map(({ id, categoryId, title, rewardCoins, completedDate }) => ({
+    id,
+    categoryId,
+    title,
+    rewardCoins,
+    completedDate,
+  })),
+  nodes: workspace.nodes.map(({ id, type, position, data }) => ({
+    id,
+    type,
+    position: { x: position.x, y: position.y },
+    data: {
+      id: data.id,
+      name: data.name,
+      description: data.description,
+      categoryId: data.categoryId,
+      requiredCoins: data.requiredCoins,
+      prerequisiteIds: data.prerequisiteIds,
+      status: data.status,
+    },
+  })),
+  edges: workspace.edges.map(({ id, source, target, type, animated }) => ({ id, source, target, type, animated })),
+})
+
+const isUntouchedLegacyDemo = (workspace: WorkspaceData): boolean =>
+  workspaceContentSignature(workspace) === workspaceContentSignature(createLegacyDemoWorkspace())
+
 export const loadWorkspace = (storage: Storage): WorkspaceData => {
   try {
     const serialized = storage.getItem(STORAGE_KEY)
     if (!serialized) return createDefaultWorkspace()
-    return parseWorkspace(JSON.parse(serialized)) ?? createDefaultWorkspace()
+    const parsed = parseWorkspace(JSON.parse(serialized))
+    return !parsed || isUntouchedLegacyDemo(parsed) ? createDefaultWorkspace() : parsed
   } catch {
     return createDefaultWorkspace()
   }

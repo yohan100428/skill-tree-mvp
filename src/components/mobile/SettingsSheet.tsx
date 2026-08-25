@@ -49,8 +49,8 @@ export const SettingsSheet = ({ categories, onClose, onUpdateCategory, onDeleteC
         ))}
       </div>
       <button type="button" className="reset-button" onClick={() => {
-        if (window.confirm('모든 데이터를 초기 데모 상태로 되돌릴까요?')) onReset()
-      }}>Reset Demo Data</button>
+        if (window.confirm('모든 Tree, Quest, Skill을 삭제하고 ME만 남길까요?')) onReset()
+      }}>Reset All Data</button>
     </div>
   </BottomSheet>
 )

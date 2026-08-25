@@ -1,9 +1,16 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { createLegacyDemoWorkspace } from '../data/defaultTree'
+import { saveWorkspace } from '../utils/storage'
 import { useSkillMap } from './useSkillMap'
 
 describe('useSkillMap', () => {
-  beforeEach(() => localStorage.clear())
+  beforeEach(() => {
+    localStorage.clear()
+    const existingWorkspace = createLegacyDemoWorkspace()
+    existingWorkspace.nodes[0].data.description = 'Existing user workspace'
+    saveWorkspace(localStorage, existingWorkspace)
+  })
 
   it('creates and selects a category with a default coin name', () => {
     const { result } = renderHook(() => useSkillMap())
@@ -141,14 +148,16 @@ describe('useSkillMap', () => {
       .toEqual([])
   })
 
-  it('resets all in-memory changes to fresh demo data', () => {
+  it('resets all in-memory changes to an empty goal workspace', () => {
     const { result } = renderHook(() => useSkillMap())
     act(() => { result.current.addCategory('음악', 'Music Coin') })
 
     act(() => { result.current.resetWorkspace() })
 
-    expect(result.current.workspace.categories.map((category) => category.id)).toEqual(['fitness', 'study'])
-    expect(result.current.workspace.categories.every((category) => category.coins === 0)).toBe(true)
-    expect(result.current.workspace.selectedCategoryId).toBe('fitness')
+    expect(result.current.workspace.categories).toEqual([])
+    expect(result.current.workspace.quests).toEqual([])
+    expect(result.current.workspace.nodes).toEqual([])
+    expect(result.current.workspace.edges).toEqual([])
+    expect(result.current.workspace.selectedCategoryId).toBeNull()
   })
 })

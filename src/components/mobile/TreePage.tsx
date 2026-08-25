@@ -1,6 +1,7 @@
 import type { Connection, EdgeChange, NodeChange } from '@xyflow/react'
 import { SkillTreeCanvas } from '../SkillTreeCanvas'
 import type { SkillNode, TreeCategory, WorkspaceData } from '../../types/skillTree'
+import { MeRoot } from './MeRoot'
 
 interface TreePageProps {
   categories: TreeCategory[]
@@ -64,7 +65,7 @@ export const TreePage = ({
           />
         </>
       ) : (
-        <section className="empty-state"><strong>아직 Tree가 없어요</strong><p>+ 버튼으로 첫 Tree를 만들어 보세요.</p></section>
+        <MeRoot />
       )}
     </div>
   )

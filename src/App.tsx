@@ -25,7 +25,7 @@ type Sheet =
 
 const App = () => {
   const actions = useSkillMap()
-  const [page, setPage] = useState<MobilePage>('today')
+  const [page, setPage] = useState<MobilePage>('tree')
   const [today, setToday] = useState(() => getLocalDate())
   const [feedback, setFeedback] = useState<string>()
   const [selectedSkillId, setSelectedSkillId] = useState<string>()
@@ -118,6 +118,7 @@ const App = () => {
       )}
       {sheet?.type === 'add' && (
         <AddActionSheet
+          hasTrees={actions.workspace.categories.length > 0}
           onClose={() => setSheet(undefined)}
           onChoose={(kind) => setSheet({ type: `${kind}Form` } as Sheet)}
         />
