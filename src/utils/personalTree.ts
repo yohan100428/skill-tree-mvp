@@ -15,9 +15,13 @@ export const categoryNodeId = (categoryId: string): string =>
   `${CATEGORY_NODE_PREFIX}${categoryId}`
 
 const categoryAngle = (categories: TreeCategory[], categoryId: string): number => {
-  const index = categories.findIndex((category) => category.id === categoryId)
-  if (index < 0 || categories.length === 0) return 0
-  return Math.PI / 2 + (Math.PI * 2 * index) / categories.length
+  if (!categories.some((category) => category.id === categoryId)) return 0
+  let hash = 2166136261
+  for (const character of categoryId) {
+    hash ^= character.charCodeAt(0)
+    hash = Math.imul(hash, 16777619)
+  }
+  return ((hash >>> 0) / 0x100000000) * Math.PI * 2
 }
 
 const roundedCoordinate = (value: number): number => {

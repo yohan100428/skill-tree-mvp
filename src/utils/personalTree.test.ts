@@ -85,8 +85,21 @@ describe('personal skill map graph', () => {
     const rootPosition = getSuggestedSkillPosition(workspace, 'fitness')
     const withRoot = { ...workspace, nodes: [{ ...skill('fitness-start', 'fitness'), position: rootPosition }] }
 
-    expect(categoryPosition).toEqual({ x: 0, y: 260 })
-    expect(rootPosition).toEqual({ x: 0, y: 480 })
-    expect(getSuggestedSkillPosition(withRoot, 'fitness', 'fitness-start')).toEqual({ x: 0, y: 700 })
+    const dependentPosition = getSuggestedSkillPosition(withRoot, 'fitness', 'fitness-start')
+    expect(Math.round(Math.hypot(rootPosition.x - categoryPosition.x, rootPosition.y - categoryPosition.y)))
+      .toBe(220)
+    expect(Math.round(Math.hypot(dependentPosition.x - rootPosition.x, dependentPosition.y - rootPosition.y)))
+      .toBe(220)
+  })
+
+  it('keeps existing category branch positions stable when categories change', () => {
+    const fitness = { id: 'fitness', name: '운동', coinName: 'Fitness Coin', coins: 0 }
+    const study = { id: 'study', name: '공부', coinName: 'Study Coin', coins: 0 }
+    const license = { id: 'license', name: '자격증', coinName: 'License Coin', coins: 0 }
+
+    expect(getCategoryPosition([fitness, study], 'fitness'))
+      .toEqual(getCategoryPosition([fitness, study, license], 'fitness'))
+    expect(getCategoryPosition([fitness, study], 'study'))
+      .toEqual(getCategoryPosition([fitness, study, license], 'study'))
   })
 })

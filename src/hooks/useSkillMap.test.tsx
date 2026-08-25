@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createLegacyDemoWorkspace } from '../data/defaultTree'
+import { getCategoryPosition } from '../utils/personalTree'
 import { saveWorkspace } from '../utils/storage'
 import { useSkillMap } from './useSkillMap'
 
@@ -143,8 +144,15 @@ describe('useSkillMap', () => {
     })
     const dependentSkill = result.current.workspace.nodes.find((node) => node.data.name === '운동 30일')!
 
-    expect(rootSkill.position).toEqual({ x: 0, y: 480 })
-    expect(dependentSkill.position).toEqual({ x: 0, y: 700 })
+    const categoryPosition = getCategoryPosition(result.current.workspace.categories, categoryId)
+    expect(Math.round(Math.hypot(
+      rootSkill.position.x - categoryPosition.x,
+      rootSkill.position.y - categoryPosition.y,
+    ))).toBe(220)
+    expect(Math.round(Math.hypot(
+      dependentSkill.position.x - rootSkill.position.x,
+      dependentSkill.position.y - rootSkill.position.y,
+    ))).toBe(220)
   })
 
   it('persists node positions changed on the Tree canvas', () => {
