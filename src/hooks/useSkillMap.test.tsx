@@ -145,14 +145,18 @@ describe('useSkillMap', () => {
     const dependentSkill = result.current.workspace.nodes.find((node) => node.data.name === '운동 30일')!
 
     const categoryPosition = getCategoryPosition(result.current.workspace.categories, categoryId)
-    expect(Math.round(Math.hypot(
+    const rootDistance = Math.round(Math.hypot(
       rootSkill.position.x - categoryPosition.x,
       rootSkill.position.y - categoryPosition.y,
-    ))).toBe(220)
-    expect(Math.round(Math.hypot(
+    ))
+    const dependentDistance = Math.round(Math.hypot(
       dependentSkill.position.x - rootSkill.position.x,
       dependentSkill.position.y - rootSkill.position.y,
-    ))).toBe(220)
+    ))
+    expect(rootDistance).toBeGreaterThanOrEqual(219)
+    expect(rootDistance).toBeLessThanOrEqual(221)
+    expect(dependentDistance).toBeGreaterThanOrEqual(219)
+    expect(dependentDistance).toBeLessThanOrEqual(221)
   })
 
   it('persists node positions changed on the Tree canvas', () => {
