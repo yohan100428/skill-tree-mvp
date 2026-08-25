@@ -7,14 +7,15 @@ const nodeTypes: NodeTypes = { skill: SkillNode }
 
 interface SkillTreeCanvasProps {
   map: SkillMap
+  ariaLabel?: string
   onNodesChange: (changes: NodeChange<SkillNodeType>[]) => void
   onEdgesChange: (changes: EdgeChange[]) => void
   onConnect: (connection: Connection) => void
   onSelectSkill: (skillId: string) => void
 }
 
-export const SkillTreeCanvas = ({ map, onNodesChange, onEdgesChange, onConnect, onSelectSkill }: SkillTreeCanvasProps) => (
-  <section className="canvas" aria-label="Skill map canvas">
+export const SkillTreeCanvas = ({ map, ariaLabel = 'Skill map canvas', onNodesChange, onEdgesChange, onConnect, onSelectSkill }: SkillTreeCanvasProps) => (
+  <section className="canvas tree-canvas" aria-label={ariaLabel}>
     <ReactFlow<SkillNodeType>
       nodes={map.nodes}
       edges={map.edges}
@@ -43,7 +44,7 @@ export const SkillTreeCanvas = ({ map, onNodesChange, onEdgesChange, onConnect, 
       />
     </ReactFlow>
     {map.nodes.length === 0 && (
-      <div className="empty-canvas"><strong>This map is empty.</strong><span>Add a category and skill to begin.</span></div>
+      <div className="empty-canvas"><strong>이 Tree는 아직 비어 있어요.</strong><span>+ 버튼으로 첫 Skill을 만들어 보세요.</span></div>
     )}
   </section>
 )

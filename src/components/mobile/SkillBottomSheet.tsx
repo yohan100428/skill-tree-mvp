@@ -8,6 +8,7 @@ interface SkillBottomSheetProps {
   onClose: () => void
   onUnlock: (skillId: string) => void
   onEdit: (skillId: string) => void
+  onDelete: (skillId: string) => void
 }
 
 export const SkillBottomSheet = ({
@@ -17,6 +18,7 @@ export const SkillBottomSheet = ({
   onClose,
   onUnlock,
   onEdit,
+  onDelete,
 }: SkillBottomSheetProps) => {
   const category = categories.find((candidate) => candidate.id === skill.data.categoryId)
   const coins = category?.coins ?? 0
@@ -59,6 +61,7 @@ export const SkillBottomSheet = ({
           <button type="button" className="primary-button full-button" onClick={() => onUnlock(skill.id)}>UNLOCK</button>
         )}
         <button type="button" className="secondary-button full-button" onClick={() => onEdit(skill.id)}>수정</button>
+        <button type="button" className="secondary-button danger-action full-button" onClick={() => onDelete(skill.id)}>삭제</button>
       </div>
     </BottomSheet>
   )

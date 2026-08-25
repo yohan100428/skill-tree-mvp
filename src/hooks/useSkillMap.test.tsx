@@ -116,6 +116,31 @@ describe('useSkillMap', () => {
     }))
   })
 
+  it('persists node positions changed on the Tree canvas', () => {
+    const { result } = renderHook(() => useSkillMap())
+
+    act(() => {
+      result.current.changeNodes([
+        { id: 'fitness-start', type: 'position', position: { x: 420, y: 260 }, dragging: false },
+      ])
+    })
+
+    expect(result.current.workspace.nodes.find((node) => node.id === 'fitness-start')?.position)
+      .toEqual({ x: 420, y: 260 })
+  })
+
+  it('removes a dependency when its canvas edge is deleted', () => {
+    const { result } = renderHook(() => useSkillMap())
+
+    act(() => {
+      result.current.changeEdges([{ id: 'fitness-start->fitness-3-week', type: 'remove' }])
+    })
+
+    expect(result.current.workspace.edges.some((edge) => edge.id === 'fitness-start->fitness-3-week')).toBe(false)
+    expect(result.current.workspace.nodes.find((node) => node.id === 'fitness-3-week')?.data.prerequisiteIds)
+      .toEqual([])
+  })
+
   it('resets all in-memory changes to fresh demo data', () => {
     const { result } = renderHook(() => useSkillMap())
     act(() => { result.current.addCategory('음악', 'Music Coin') })

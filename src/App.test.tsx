@@ -50,7 +50,7 @@ describe('mobile skill tree app', () => {
       .toEqual(['Today', 'Tree', '+'])
   })
 
-  it('shows one vertical Tree and opens skill details in a bottom sheet', () => {
+  it('shows the selected Tree on a free-position canvas and opens skill details', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
 
@@ -58,10 +58,11 @@ describe('mobile skill tree app', () => {
     const tabs = screen.getByRole('tablist', { name: 'Tree selection' })
     expect(within(tabs).getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['운동', '공부'])
 
-    const tree = screen.getByLabelText('운동 skill tree')
-    expect(within(tree).getByRole('button', { name: /운동 시작.*available/i })).toBeInTheDocument()
-    expect(within(tree).getByRole('button', { name: /주 3회 운동.*locked/i })).toBeInTheDocument()
-    fireEvent.click(within(tree).getByRole('button', { name: /운동 시작.*available/i }))
+    const canvas = screen.getByRole('region', { name: '운동 skill tree canvas' })
+    expect(within(canvas).getByTestId('skill-node-fitness-start')).toBeInTheDocument()
+    expect(within(canvas).getByTestId('skill-node-fitness-3-week')).toBeInTheDocument()
+    expect(within(canvas).queryByTestId('skill-node-study-start')).not.toBeInTheDocument()
+    fireEvent.click(within(canvas).getByTestId('skill-node-fitness-start'))
 
     const details = screen.getByRole('dialog', { name: '운동 시작' })
     expect(within(details).getByText('Fitness Coin')).toBeInTheDocument()
@@ -97,7 +98,7 @@ describe('mobile skill tree app', () => {
     fireEvent.click(within(form).getByRole('button', { name: '만들기' }))
 
     expect(screen.getByRole('heading', { name: 'TREE' })).toBeInTheDocument()
-    expect(within(screen.getByLabelText('운동 skill tree')).getByRole('button', { name: /아침 러닝 locked/i })).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: '운동 skill tree canvas' })).getByTestId(/^skill-node-skill-/)).toHaveTextContent('아침 러닝')
   })
 
   it('creates a Tree with an automatic coin name and makes it selectable', () => {
@@ -129,19 +130,30 @@ describe('mobile skill tree app', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
-    fireEvent.click(screen.getByRole('button', { name: /운동 시작 available/i }))
+    fireEvent.click(screen.getByTestId('skill-node-fitness-start'))
     fireEvent.click(within(screen.getByRole('dialog', { name: '운동 시작' })).getByRole('button', { name: '수정' }))
 
     const form = screen.getByRole('dialog', { name: 'EDIT SKILL' })
     fireEvent.change(within(form).getByRole('textbox', { name: '이름' }), { target: { value: '가볍게 시작' } })
     fireEvent.click(within(form).getByRole('button', { name: '저장' }))
-    expect(screen.getByRole('button', { name: /가볍게 시작 available/i })).toBeInTheDocument()
+    expect(screen.getByTestId('skill-node-fitness-start')).toHaveTextContent('가볍게 시작')
 
     fireEvent.click(screen.getByRole('button', { name: 'Open settings' }))
     const settings = screen.getByRole('dialog', { name: 'SETTINGS' })
     expect(within(settings).getByText('Manage Trees')).toBeInTheDocument()
     fireEvent.click(within(settings).getByRole('button', { name: 'Reset Demo Data' }))
 
-    expect(screen.getByRole('button', { name: /운동 시작 available/i })).toBeInTheDocument()
+    expect(screen.getByTestId('skill-node-fitness-start')).toHaveTextContent('운동 시작')
+  })
+
+  it('deletes a selected canvas node from its mobile detail sheet', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
+    fireEvent.click(screen.getByTestId('skill-node-fitness-100-days'))
+
+    fireEvent.click(within(screen.getByRole('dialog', { name: '운동 100일' })).getByRole('button', { name: '삭제' }))
+
+    expect(screen.queryByTestId('skill-node-fitness-100-days')).not.toBeInTheDocument()
   })
 })

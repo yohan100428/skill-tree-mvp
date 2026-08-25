@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { Connection } from '@xyflow/react'
+import { applyEdgeChanges, applyNodeChanges } from '@xyflow/react'
+import type { Connection, EdgeChange, NodeChange } from '@xyflow/react'
 import type {
   DailyQuest,
   SkillData,
@@ -11,6 +12,7 @@ import {
   addDependency,
   deleteSkill,
   recalculateMap,
+  removeDependency,
   toNonNegativeInteger,
   unlockSkill as unlockSkillInMap,
 } from '../utils/skillLogic'
@@ -55,6 +57,8 @@ export interface SkillMapActions {
   unlockSkill: (skillId: string) => void
   removeSkill: (skillId: string) => void
   connectSkills: (connection: Connection) => string | undefined
+  changeNodes: (changes: NodeChange<SkillNode>[]) => void
+  changeEdges: (changes: EdgeChange[]) => void
   resetWorkspace: () => void
 }
 
@@ -250,6 +254,38 @@ export const useSkillMap = (): SkillMapActions => {
     return result.reason
   }, [workspace])
 
+  const changeNodes = useCallback((changes: NodeChange<SkillNode>[]) => {
+    setWorkspace((current) => {
+      const removedIds = changes.filter((change) => change.type === 'remove').map((change) => change.id)
+      const withoutRemoved = removedIds.reduce(
+        (map, id) => deleteSkill(map, current.categories, id),
+        { nodes: current.nodes, edges: current.edges },
+      )
+      const safeChanges = changes.filter((change) => change.type !== 'remove')
+      return {
+        ...current,
+        ...withoutRemoved,
+        nodes: applyNodeChanges(safeChanges, withoutRemoved.nodes),
+      }
+    })
+  }, [])
+
+  const changeEdges = useCallback((changes: EdgeChange[]) => {
+    setWorkspace((current) => {
+      const removedIds = changes.filter((change) => change.type === 'remove').map((change) => change.id)
+      const withoutRemoved = removedIds.reduce(
+        (map, id) => removeDependency(map, current.categories, id),
+        { nodes: current.nodes, edges: current.edges },
+      )
+      const safeChanges = changes.filter((change) => change.type !== 'remove')
+      return {
+        ...current,
+        ...withoutRemoved,
+        edges: applyEdgeChanges(safeChanges, withoutRemoved.edges),
+      }
+    })
+  }, [])
+
   const resetWorkspace = useCallback(() => setWorkspace(createDefaultWorkspace()), [])
 
   return {
@@ -268,6 +304,8 @@ export const useSkillMap = (): SkillMapActions => {
     unlockSkill,
     removeSkill,
     connectSkills,
+    changeNodes,
+    changeEdges,
     resetWorkspace,
   }
 }

@@ -83,10 +83,13 @@ const App = () => {
         ) : (
           <TreePage
             categories={actions.workspace.categories}
-            skills={actions.workspace.nodes}
+            workspace={actions.workspace}
             selectedCategoryId={actions.workspace.selectedCategoryId}
             onSelectCategory={actions.selectCategory}
             onSelectSkill={setSelectedSkillId}
+            onNodesChange={actions.changeNodes}
+            onEdgesChange={actions.changeEdges}
+            onConnect={(connection) => { actions.connectSkills(connection) }}
           />
         )}
       </div>
@@ -105,6 +108,12 @@ const App = () => {
           onClose={() => setSelectedSkillId(undefined)}
           onUnlock={actions.unlockSkill}
           onEdit={(skillId) => { setSelectedSkillId(undefined); setSheet({ type: 'skillForm', skillId }) }}
+          onDelete={(skillId) => {
+            if (window.confirm(`“${selectedSkill.data.name}” Skill을 삭제할까요?`)) {
+              actions.removeSkill(skillId)
+              setSelectedSkillId(undefined)
+            }
+          }}
         />
       )}
       {sheet?.type === 'add' && (
