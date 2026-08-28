@@ -38,15 +38,9 @@ export const TreePage = ({
           <button type="button" className="context-add-button" aria-label="스킬 추가" disabled={categories.length === 0} onClick={onAddSkill}>＋ 스킬</button>
         </div>
       </section>
-      {categories.length > 0 && (
-        <div className="tree-balance tree-balance--summary">
-          <span>{categories.length} categories</span>
-          <strong>{categories.reduce((total, category) => total + category.coins, 0)} Coin</strong>
-        </div>
-      )}
       <SkillTreeCanvas
         map={map}
-        ariaLabel="ME personal skill map canvas"
+        ariaLabel="personal mind map canvas"
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}

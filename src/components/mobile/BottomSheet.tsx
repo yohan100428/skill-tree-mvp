@@ -12,7 +12,7 @@ export const BottomSheet = ({ titleId, onClose, children }: BottomSheetProps) =>
   }}>
     <section className="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <div className="sheet-handle" aria-hidden="true" />
-      <button type="button" className="sheet-close" aria-label="Close" onClick={onClose}>×</button>
+      <button type="button" className="sheet-close" aria-label="닫기" onClick={onClose}>×</button>
       {children}
     </section>
   </div>

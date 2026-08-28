@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { QuestForm } from './components/forms/QuestForm'
 import { SkillForm } from './components/forms/SkillForm'
 import { TreeForm } from './components/forms/TreeForm'
@@ -11,7 +11,7 @@ import { SkillBottomSheet } from './components/mobile/SkillBottomSheet'
 import { TodayPage } from './components/mobile/TodayPage'
 import { TreePage } from './components/mobile/TreePage'
 import { useSkillMap } from './hooks/useSkillMap'
-import type { DailyQuest, TreeCategory } from './types/skillTree'
+import type { DailyQuest } from './types/skillTree'
 import { canCompleteQuest, getLocalDate } from './utils/questLogic'
 import { STORAGE_KEY } from './utils/storage'
 
@@ -26,10 +26,8 @@ const App = () => {
   const actions = useSkillMap()
   const [page, setPage] = useState<MobilePage>('today')
   const [today, setToday] = useState(() => getLocalDate())
-  const [feedback, setFeedback] = useState<string>()
   const [selectedSkillId, setSelectedSkillId] = useState<string>()
   const [sheet, setSheet] = useState<Sheet>()
-  const feedbackTimer = useRef<ReturnType<typeof globalThis.setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     const now = new Date()
@@ -40,8 +38,6 @@ const App = () => {
     )
     return () => globalThis.clearTimeout(timeout)
   }, [today])
-
-  useEffect(() => () => globalThis.clearTimeout(feedbackTimer.current), [])
 
   useEffect(() => {
     const clearCachedWorkspace = (event: KeyboardEvent) => {
@@ -55,8 +51,6 @@ const App = () => {
       event.preventDefault()
       localStorage.removeItem(STORAGE_KEY)
       actions.resetWorkspace()
-      globalThis.clearTimeout(feedbackTimer.current)
-      setFeedback(undefined)
       setSelectedSkillId(undefined)
       setSheet(undefined)
       setPage('today')
@@ -65,12 +59,9 @@ const App = () => {
     return () => window.removeEventListener('keydown', clearCachedWorkspace)
   }, [actions.resetWorkspace])
 
-  const completeQuest = (quest: DailyQuest, category: TreeCategory) => {
+  const completeQuest = (quest: DailyQuest) => {
     if (!canCompleteQuest(quest, today)) return
     actions.completeQuest(quest.id, today)
-    setFeedback(`+${quest.rewardCoins} ${category.coinName}`)
-    globalThis.clearTimeout(feedbackTimer.current)
-    feedbackTimer.current = globalThis.setTimeout(() => setFeedback(undefined), 1600)
   }
 
   const navigate = (nextPage: MobilePage) => {
@@ -95,10 +86,8 @@ const App = () => {
           <TodayPage
             categories={actions.workspace.categories}
             quests={actions.workspace.quests}
-            skills={actions.workspace.nodes}
             today={today}
             onCompleteQuest={completeQuest}
-            onUnlockSkill={actions.unlockSkill}
             onOpenQuestMenu={(questId) => setSheet({ type: 'questActions', questId })}
             onAddMission={() => { setSelectedSkillId(undefined); setSheet({ type: 'questForm' }) }}
           />
@@ -115,7 +104,6 @@ const App = () => {
           />
         )}
       </div>
-      {feedback && <div className="coin-feedback" role="status">{feedback}</div>}
       <BottomNavigation
         page={page}
         onNavigate={navigate}
@@ -127,7 +115,6 @@ const App = () => {
           allSkills={actions.workspace.nodes}
           categories={actions.workspace.categories}
           onClose={() => setSelectedSkillId(undefined)}
-          onUnlock={actions.unlockSkill}
           onEdit={(skillId) => { setSelectedSkillId(undefined); setSheet({ type: 'skillForm', skillId }) }}
           onDelete={(skillId) => {
             if (window.confirm(`“${selectedSkill.data.name}” Skill을 삭제할까요?`)) {
@@ -181,8 +168,8 @@ const App = () => {
       {sheet?.type === 'treeForm' && (
         <TreeForm
           onClose={() => setSheet(undefined)}
-          onSubmit={(name, coinName) => {
-            actions.addCategory(name, coinName)
+          onSubmit={(name, finalGoal) => {
+            actions.addCategory(name, finalGoal)
             setPage('tree')
             setSheet(undefined)
           }}

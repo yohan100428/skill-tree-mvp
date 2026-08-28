@@ -11,8 +11,6 @@ const node = (id: string, prerequisiteIds: string[] = []): SkillNode => ({
     name: id,
     description: '',
     categoryId: 'fitness',
-    requiredCoins: 0,
-    status: 'locked',
     prerequisiteIds,
   },
 })

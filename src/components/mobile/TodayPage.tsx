@@ -1,13 +1,11 @@
-import type { DailyQuest, SkillNode, TreeCategory } from '../../types/skillTree'
+import type { DailyQuest, TreeCategory } from '../../types/skillTree'
 import { QuestGroup } from './QuestGroup'
 
 interface TodayPageProps {
   categories: TreeCategory[]
   quests: DailyQuest[]
-  skills: SkillNode[]
   today: string
-  onCompleteQuest: (quest: DailyQuest, category: TreeCategory) => void
-  onUnlockSkill: (skillId: string) => void
+  onCompleteQuest: (quest: DailyQuest) => void
   onOpenQuestMenu: (questId: string) => void
   onAddMission: () => void
 }
@@ -20,16 +18,13 @@ const displayDate = (today: string): string => {
 export const TodayPage = ({
   categories,
   quests,
-  skills,
   today,
   onCompleteQuest,
-  onUnlockSkill,
   onOpenQuestMenu,
   onAddMission,
 }: TodayPageProps) => {
   const completed = quests.filter((quest) => quest.completedDate === today).length
   const percent = quests.length === 0 ? 0 : Math.round((completed / quests.length) * 100)
-  const availableSkills = skills.filter((skill) => skill.data.status === 'available').slice(0, 3)
 
   return (
     <div className="page today-page">
@@ -70,23 +65,6 @@ export const TodayPage = ({
           <section className="empty-state"><strong>오늘의 미션이 없어요</strong><p>위의 + 미션 버튼으로 바로 추가할 수 있어요.</p></section>
         )}
       </div>
-
-      {availableSkills.length > 0 && (
-        <section className="available-section" aria-label="Unlock available">
-          <span className="section-label">UNLOCK AVAILABLE</span>
-          <div className="available-card">
-            {availableSkills.map((skill) => {
-              const category = categories.find((candidate) => candidate.id === skill.data.categoryId)
-              return (
-                <article className="available-row" key={skill.id}>
-                  <div><strong>{skill.data.name}</strong><span>{skill.data.requiredCoins} {category?.coinName ?? 'Coin'}</span></div>
-                  <button type="button" aria-label={`${skill.data.name} unlock`} onClick={() => onUnlockSkill(skill.id)}>UNLOCK</button>
-                </article>
-              )
-            })}
-          </div>
-        </section>
-      )}
     </div>
   )
 }

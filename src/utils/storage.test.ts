@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createDefaultWorkspace, createLegacyDemoWorkspace } from '../data/defaultTree'
+import { createDefaultWorkspace } from '../data/defaultTree'
 import type { WorkspaceData } from '../types/skillTree'
 import { LEGACY_STORAGE_KEY, loadWorkspace, saveWorkspace, STORAGE_KEY } from './storage'
 
@@ -18,6 +18,19 @@ const populatedWorkspace = (): WorkspaceData => ({
   edges: [],
 })
 
+const legacyWorkspace = () => ({
+  version: 2,
+  userName: 'ME',
+  selectedCategoryId: 'fitness',
+  categories: [{ id: 'fitness', name: '운동', coinName: 'Fitness Coin', coins: 0 }],
+  quests: [{ id: 'fitness-daily', categoryId: 'fitness', title: '오늘 운동하기', rewardCoins: 1, completedDate: null as string | null }],
+  nodes: [
+    { id: 'fitness-start', type: 'skill', position: { x: 150, y: 30 }, data: { id: 'fitness-start', name: '운동 시작', description: '', categoryId: 'fitness', requiredCoins: 0, status: 'available', prerequisiteIds: [] as string[] } },
+    { id: 'fitness-next', type: 'skill', position: { x: 370, y: 30 }, data: { id: 'fitness-next', name: '운동 지속', description: '', categoryId: 'fitness', requiredCoins: 5, status: 'locked', prerequisiteIds: ['fitness-start'] } },
+  ],
+  edges: [{ id: 'fitness-start->fitness-next', source: 'fitness-start', target: 'fitness-next', type: 'smoothstep', animated: true }],
+})
+
 describe('version 3 workspace persistence', () => {
   beforeEach(() => localStorage.clear())
 
@@ -34,7 +47,7 @@ describe('version 3 workspace persistence', () => {
   })
 
   it('migrates user-authored version 2 data without coin or unlock fields', () => {
-    const legacy = createLegacyDemoWorkspace()
+    const legacy = legacyWorkspace()
     legacy.userName = '민준'
     legacy.categories[0].coins = 47
     legacy.quests[0].completedDate = '2026-08-24'
@@ -64,7 +77,7 @@ describe('version 3 workspace persistence', () => {
   })
 
   it('prefers current data when both storage versions exist', () => {
-    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(createLegacyDemoWorkspace()))
+    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(legacyWorkspace()))
     saveWorkspace(localStorage, populatedWorkspace())
 
     expect(loadWorkspace(localStorage).userName).toBe('민준')
