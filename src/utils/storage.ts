@@ -4,6 +4,14 @@ import type { DailyQuest, SkillData, SkillEdge, SkillNode, TreeCategory, Workspa
 export const STORAGE_KEY = 'skill-tree-workspace-v3'
 export const LEGACY_STORAGE_KEY = 'skill-tree-workspace-v2'
 
+export const getBrowserStorage = (): Storage | null => {
+  try {
+    return globalThis.localStorage
+  } catch {
+    return null
+  }
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
 
@@ -211,8 +219,9 @@ const migrateLegacyWorkspace = (value: unknown): WorkspaceData | null => {
   return createWorkspace(value, categories, quests, nodes, edges)
 }
 
-export const loadWorkspace = (storage: Storage): WorkspaceData => {
+export const loadWorkspace = (storage: Storage | null): WorkspaceData => {
   try {
+    if (storage === null) return createDefaultWorkspace()
     const current = storage.getItem(STORAGE_KEY)
     if (current !== null) return parseWorkspace(JSON.parse(current)) ?? createDefaultWorkspace()
     const legacy = storage.getItem(LEGACY_STORAGE_KEY)
@@ -223,10 +232,19 @@ export const loadWorkspace = (storage: Storage): WorkspaceData => {
   }
 }
 
-export const saveWorkspace = (storage: Storage, workspace: WorkspaceData): void => {
+export const saveWorkspace = (storage: Storage | null, workspace: WorkspaceData): void => {
   try {
+    if (storage === null) return
     storage.setItem(STORAGE_KEY, JSON.stringify(workspace))
   } catch {
     // Keep the in-memory app usable when storage is unavailable or full.
+  }
+}
+
+export const removeWorkspace = (storage: Storage | null): void => {
+  try {
+    storage?.removeItem(STORAGE_KEY)
+  } catch {
+    // Reset the in-memory state even when browser storage cannot be changed.
   }
 }

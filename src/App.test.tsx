@@ -165,4 +165,20 @@ describe('goal-ended personal mind map app', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
     expect(container.textContent).not.toMatch(/coin/i)
   })
+
+  it('renders in memory when browser storage access is blocked', () => {
+    const storageDescriptor = Object.getOwnPropertyDescriptor(window, 'localStorage')
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get: () => { throw new DOMException('Access is denied for this document', 'SecurityError') },
+    })
+
+    try {
+      render(<App />)
+      expect(screen.getByRole('heading', { name: 'TREE' })).toBeInTheDocument()
+      expect(screen.getByTestId('me-root')).toHaveTextContent('ME')
+    } finally {
+      if (storageDescriptor) Object.defineProperty(window, 'localStorage', storageDescriptor)
+    }
+  })
 })

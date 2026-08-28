@@ -4,7 +4,7 @@ import type { Connection, EdgeChange, NodeChange } from '@xyflow/react'
 import type { DailyQuest, SkillData, SkillNode, TreeCategory, WorkspaceData } from '../types/skillTree'
 import { addDependency, deleteSkill, normalizeMap, removeDependency } from '../utils/skillLogic'
 import { completeDailyQuest } from '../utils/questLogic'
-import { loadWorkspace, saveWorkspace } from '../utils/storage'
+import { getBrowserStorage, loadWorkspace, saveWorkspace } from '../utils/storage'
 import { createDefaultWorkspace } from '../data/defaultTree'
 import { getSuggestedSkillPosition } from '../utils/personalTree'
 
@@ -45,9 +45,10 @@ export interface SkillMapActions {
 }
 
 export const useSkillMap = (): SkillMapActions => {
-  const [workspace, setWorkspace] = useState<WorkspaceData>(() => loadWorkspace(localStorage))
+  const storage = getBrowserStorage()
+  const [workspace, setWorkspace] = useState<WorkspaceData>(() => loadWorkspace(storage))
 
-  useEffect(() => saveWorkspace(localStorage, workspace), [workspace])
+  useEffect(() => saveWorkspace(storage, workspace), [storage, workspace])
 
   const selectedCategory = useMemo(
     () => workspace.categories.find((category) => category.id === workspace.selectedCategoryId),

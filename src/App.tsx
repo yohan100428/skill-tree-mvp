@@ -13,7 +13,7 @@ import { TreePage } from './components/mobile/TreePage'
 import { useSkillMap } from './hooks/useSkillMap'
 import type { DailyQuest } from './types/skillTree'
 import { canCompleteQuest, getLocalDate } from './utils/questLogic'
-import { STORAGE_KEY } from './utils/storage'
+import { getBrowserStorage, removeWorkspace } from './utils/storage'
 
 type Sheet =
   | { type: 'questForm'; questId?: string }
@@ -49,7 +49,7 @@ const App = () => {
         && (target.matches('input, textarea, select') || target.isContentEditable)
       ) return
       event.preventDefault()
-      localStorage.removeItem(STORAGE_KEY)
+      removeWorkspace(getBrowserStorage())
       actions.resetWorkspace()
       setSelectedSkillId(undefined)
       setSheet(undefined)
