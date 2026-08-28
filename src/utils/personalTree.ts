@@ -7,11 +7,39 @@ import type {
   TreeCategory,
   WorkspaceData,
 } from '../types/skillTree'
-import type { XYPosition } from '@xyflow/react'
+import { Position } from '@xyflow/react'
+import type { NodeHandle, XYPosition } from '@xyflow/react'
 
 export const ME_NODE_ID = 'personal-root:me'
 const CATEGORY_NODE_PREFIX = 'personal-category:'
 const FINAL_GOAL_NODE_PREFIX = 'personal-final-goal:'
+const NODE_SIZE = {
+  me: { initialWidth: 154, initialHeight: 154 },
+  category: { initialWidth: 150, initialHeight: 68 },
+  finalGoal: { initialWidth: 170, initialHeight: 78 },
+  skill: { initialWidth: 164, initialHeight: 76 },
+} as const
+
+const nodeHandles = (width: number, height: number, target: boolean, source: boolean): NodeHandle[] => [
+  ...(target ? [{
+    id: null,
+    type: 'target' as const,
+    position: Position.Top,
+    x: width / 2 - 5,
+    y: -5,
+    width: 10,
+    height: 10,
+  }] : []),
+  ...(source ? [{
+    id: null,
+    type: 'source' as const,
+    position: Position.Bottom,
+    x: width / 2 - 5,
+    y: height - 5,
+    width: 10,
+    height: 10,
+  }] : []),
+]
 
 export const categoryNodeId = (categoryId: string): string =>
   `${CATEGORY_NODE_PREFIX}${categoryId}`
@@ -86,6 +114,8 @@ export const buildPersonalTree = (workspace: WorkspaceData): PersonalTreeMap => 
     id: ME_NODE_ID,
     type: 'me',
     position: { x: 0, y: 0 },
+    ...NODE_SIZE.me,
+    handles: nodeHandles(NODE_SIZE.me.initialWidth, NODE_SIZE.me.initialHeight, false, true),
     data: { label: workspace.userName },
     draggable: false,
     connectable: false,
@@ -96,6 +126,8 @@ export const buildPersonalTree = (workspace: WorkspaceData): PersonalTreeMap => 
       id: categoryNodeId(category.id),
       type: 'category',
       position: getCategoryPosition(workspace.categories, category.id),
+      ...NODE_SIZE.category,
+      handles: nodeHandles(NODE_SIZE.category.initialWidth, NODE_SIZE.category.initialHeight, true, true),
       data: {
         categoryId: category.id,
         name: category.name,
@@ -121,6 +153,8 @@ export const buildPersonalTree = (workspace: WorkspaceData): PersonalTreeMap => 
         x: roundedCoordinate(direction.x * (farthestProjection + 260)),
         y: roundedCoordinate(direction.y * (farthestProjection + 260)),
       },
+      ...NODE_SIZE.finalGoal,
+      handles: nodeHandles(NODE_SIZE.finalGoal.initialWidth, NODE_SIZE.finalGoal.initialHeight, true, false),
       data: { categoryId: category.id, label: category.finalGoal },
       draggable: false,
       connectable: false,
@@ -144,7 +178,16 @@ export const buildPersonalTree = (workspace: WorkspaceData): PersonalTreeMap => 
   })
 
   return {
-    nodes: [meNode, ...categoryNodes, ...finalGoalNodes, ...workspace.nodes],
+    nodes: [
+      meNode,
+      ...categoryNodes,
+      ...finalGoalNodes,
+      ...workspace.nodes.map((node) => ({
+        ...NODE_SIZE.skill,
+        handles: nodeHandles(NODE_SIZE.skill.initialWidth, NODE_SIZE.skill.initialHeight, true, true),
+        ...node,
+      })),
+    ],
     edges: [...categoryEdges, ...rootSkillEdges, ...finalGoalEdges, ...workspace.edges],
   }
 }

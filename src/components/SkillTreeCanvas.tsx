@@ -1,4 +1,13 @@
-import { Background, BackgroundVariant, Controls, MiniMap, ReactFlow } from '@xyflow/react'
+import { useEffect, useMemo } from 'react'
+import {
+  Background,
+  BackgroundVariant,
+  Controls,
+  MiniMap,
+  ReactFlow,
+  ReactFlowProvider,
+  useReactFlow,
+} from '@xyflow/react'
 import type { Connection, EdgeChange, NodeChange, NodeTypes } from '@xyflow/react'
 import type { PersonalTreeMap, PersonalTreeNode, SkillNode as SkillNodeType } from '../types/skillTree'
 import { CategoryNode } from './CategoryNode'
@@ -17,11 +26,43 @@ interface SkillTreeCanvasProps {
   onSelectSkill: (skillId: string) => void
 }
 
-export const SkillTreeCanvas = ({ map, ariaLabel = 'Skill map canvas', onNodesChange, onEdgesChange, onConnect, onSelectSkill }: SkillTreeCanvasProps) => {
+const SkillTreeCanvasInner = ({ map, ariaLabel = 'Skill map canvas', onNodesChange, onEdgesChange, onConnect, onSelectSkill }: SkillTreeCanvasProps) => {
+  const { fitBounds } = useReactFlow()
+  const nodeSignature = useMemo(() => map.nodes.map((node) => node.id).join('\u0000'), [map.nodes])
+  const treeBounds = useMemo(() => {
+    const left = Math.min(...map.nodes.map((node) => node.position.x))
+    const top = Math.min(...map.nodes.map((node) => node.position.y))
+    const right = Math.max(...map.nodes.map((node) => node.position.x + (node.initialWidth ?? 1)))
+    const bottom = Math.max(...map.nodes.map((node) => node.position.y + (node.initialHeight ?? 1)))
+    const root = map.nodes.find((node) => node.type === 'me') ?? map.nodes[0]
+    const rootCenterX = root.position.x + (root.initialWidth ?? 1) / 2
+    const rootCenterY = root.position.y + (root.initialHeight ?? 1) / 2
+    const radiusX = Math.max(rootCenterX - left, right - rootCenterX)
+    const radiusY = Math.max(rootCenterY - top, bottom - rootCenterY)
+    return {
+      x: rootCenterX - radiusX,
+      y: rootCenterY - radiusY,
+      width: radiusX * 2,
+      height: radiusY * 2,
+    }
+  }, [nodeSignature])
   const skillIds = new Set(map.nodes.filter((node) => node.type === 'skill').map((node) => node.id))
   const dependencyEdgeIds = new Set(map.edges
     .filter((edge) => !edge.id.startsWith('personal-edge:'))
     .map((edge) => edge.id))
+
+  useEffect(() => {
+    let fitFrame = 0
+    const renderFrame = requestAnimationFrame(() => {
+      fitFrame = requestAnimationFrame(() => {
+        void fitBounds(treeBounds, { padding: 0.2, duration: 180 })
+      })
+    })
+    return () => {
+      cancelAnimationFrame(renderFrame)
+      cancelAnimationFrame(fitFrame)
+    }
+  }, [fitBounds, nodeSignature, treeBounds])
 
   return (
   <section className="canvas tree-canvas" aria-label={ariaLabel}>
@@ -40,9 +81,9 @@ export const SkillTreeCanvas = ({ map, ariaLabel = 'Skill map canvas', onNodesCh
       onConnect={onConnect}
       onNodeClick={(_, node) => { if (node.type === 'skill') onSelectSkill(node.id) }}
       fitView
-      fitViewOptions={{ padding: 0.2 }}
+      fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
       minZoom={0.2}
-      maxZoom={2}
+      maxZoom={1}
       deleteKeyCode={['Backspace', 'Delete']}
       proOptions={{ hideAttribution: true }}
     >
@@ -66,3 +107,9 @@ export const SkillTreeCanvas = ({ map, ariaLabel = 'Skill map canvas', onNodesCh
   </section>
   )
 }
+
+export const SkillTreeCanvas = (props: SkillTreeCanvasProps) => (
+  <ReactFlowProvider>
+    <SkillTreeCanvasInner {...props} />
+  </ReactFlowProvider>
+)

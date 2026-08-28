@@ -27,6 +27,8 @@ describe('personal skill map graph', () => {
     expect(map.nodes).toEqual([expect.objectContaining({
       id: 'personal-root:me',
       type: 'me',
+      initialWidth: 154,
+      initialHeight: 154,
       data: { label: '민준' },
     })])
     expect(map.edges).toEqual([])
@@ -48,6 +50,12 @@ describe('personal skill map graph', () => {
       { id: finalGoalNodeId('fitness'), type: 'finalGoal' },
       { id: finalGoalNodeId('license'), type: 'finalGoal' },
     ])
+    expect(buildPersonalTree(workspace).nodes.every((node) => (
+      typeof node.initialWidth === 'number' &&
+      typeof node.initialHeight === 'number' &&
+      Array.isArray(node.handles) &&
+      node.handles.length > 0
+    ))).toBe(true)
     expect(edgePairs(workspace)).toEqual([
       ['personal-root:me', categoryNodeId('fitness')],
       ['personal-root:me', categoryNodeId('license')],
