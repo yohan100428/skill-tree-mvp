@@ -54,6 +54,11 @@ const isSkillEdge = (value: unknown): value is SkillEdge =>
 const isValidGraph = (nodes: SkillNode[], edges: SkillEdge[]): boolean => {
   if (!hasUniqueIds(nodes) || !hasUniqueIds(edges)) return false
   if (nodes.some((node) => node.data.id !== node.id)) return false
+  if (nodes.some((node) => (
+    node.id === 'personal-root:me' ||
+    node.id.startsWith('personal-category:') ||
+    node.id.startsWith('personal-final-goal:')
+  ))) return false
 
   const nodeIds = new Set(nodes.map((node) => node.id))
   const edgePairs = new Set<string>()

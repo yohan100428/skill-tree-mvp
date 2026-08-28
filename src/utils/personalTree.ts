@@ -134,8 +134,9 @@ export const buildPersonalTree = (workspace: WorkspaceData): PersonalTreeMap => 
     .map((skill) => derivedEdge(categoryNodeId(skill.data.categoryId), skill.id))
   const finalGoalEdges = workspace.categories.flatMap((category) => {
     const categorySkills = workspace.nodes.filter((skill) => skill.data.categoryId === category.id)
+    const categorySkillIds = new Set(categorySkills.map((skill) => skill.id))
     const terminalSkills = categorySkills.filter((skill) =>
-      !workspace.edges.some((edge) => edge.source === skill.id))
+      !workspace.edges.some((edge) => edge.source === skill.id && categorySkillIds.has(edge.target)))
     const sources = terminalSkills.length > 0
       ? terminalSkills.map((skill) => skill.id)
       : [categoryNodeId(category.id)]

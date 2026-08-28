@@ -23,9 +23,6 @@ export const TodayPage = ({
   onOpenQuestMenu,
   onAddMission,
 }: TodayPageProps) => {
-  const completed = quests.filter((quest) => quest.completedDate === today).length
-  const percent = quests.length === 0 ? 0 : Math.round((completed / quests.length) * 100)
-
   return (
     <div className="page today-page">
       <section className="page-intro page-intro--actions">
@@ -35,13 +32,6 @@ export const TodayPage = ({
           <p>{displayDate(today)}</p>
         </div>
         <button type="button" className="context-add-button" aria-label="미션 추가" disabled={categories.length === 0} onClick={onAddMission}>＋ 미션</button>
-      </section>
-
-      <section className="daily-progress" aria-label="오늘의 진행">
-        <div><span>오늘의 진행</span><strong>{completed} / {quests.length}</strong></div>
-        <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={quests.length} aria-valuenow={completed}>
-          <span style={{ width: `${percent}%` }} />
-        </div>
       </section>
 
       <div className="quest-groups">

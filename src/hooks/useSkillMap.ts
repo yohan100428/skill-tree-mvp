@@ -96,12 +96,23 @@ export const useSkillMap = (): SkillMapActions => {
       const removedIds = new Set(current.nodes
         .filter((node) => node.data.categoryId === categoryId)
         .map((node) => node.id))
+      const map = normalizeMap({
+        nodes: current.nodes
+          .filter((node) => !removedIds.has(node.id))
+          .map((node) => ({
+            ...node,
+            data: {
+              ...node.data,
+              prerequisiteIds: node.data.prerequisiteIds.filter((id) => !removedIds.has(id)),
+            },
+          })),
+        edges: current.edges.filter((edge) => !removedIds.has(edge.source) && !removedIds.has(edge.target)),
+      })
       return {
         ...current,
+        ...map,
         categories,
         quests: current.quests.filter((quest) => quest.categoryId !== categoryId),
-        nodes: current.nodes.filter((node) => !removedIds.has(node.id)),
-        edges: current.edges.filter((edge) => !removedIds.has(edge.source) && !removedIds.has(edge.target)),
         selectedCategoryId: current.selectedCategoryId === categoryId
           ? categories[0]?.id ?? null
           : current.selectedCategoryId,

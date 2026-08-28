@@ -100,7 +100,7 @@ describe('goal-ended personal mind map app', () => {
     fireEvent.click(within(fitnessGroup).getByRole('button', { name: '오늘 달리기 완료' }))
 
     expect(within(fitnessGroup).getByRole('button', { name: '오늘 달리기 완료됨' })).toBeDisabled()
-    expect(screen.getByText('1 / 2')).toBeInTheDocument()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
   })
 
   it('creates and edits reward-free quests', () => {

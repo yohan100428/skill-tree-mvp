@@ -46,12 +46,30 @@ describe('useSkillMap', () => {
 
   it('deleting a category cascades through its quests, skills, and edges', () => {
     const { result } = renderHook(() => useSkillMap())
-    act(() => { result.current.deleteCategory('fitness') })
+    act(() => {
+      result.current.addSkill({ name: '교차 연결 대상', categoryId: 'study' })
+    })
+    const studySkillId = result.current.workspace.nodes.find((node) => node.data.name === '교차 연결 대상')!.id
+    const withLegacyCrossCategoryEdge: WorkspaceData = {
+      ...result.current.workspace,
+      nodes: result.current.workspace.nodes.map((node) => node.id === studySkillId
+        ? { ...node, data: { ...node.data, prerequisiteIds: ['warmup'] } }
+        : node),
+      edges: [...result.current.workspace.edges, { id: 'warmup->study', source: 'warmup', target: studySkillId }],
+    }
+    saveWorkspace(localStorage, withLegacyCrossCategoryEdge)
+    const rerendered = renderHook(() => useSkillMap())
+    act(() => { rerendered.result.current.deleteCategory('fitness') })
 
-    expect(result.current.workspace.categories.map(({ id }) => id)).toEqual(['study'])
-    expect(result.current.workspace.quests).toEqual([])
-    expect(result.current.workspace.nodes).toEqual([])
-    expect(result.current.workspace.edges).toEqual([])
+    expect(rerendered.result.current.workspace.categories.map(({ id }) => id)).toEqual(['study'])
+    expect(rerendered.result.current.workspace.quests).toEqual([])
+    expect(rerendered.result.current.workspace.nodes).toEqual([
+      expect.objectContaining({
+        id: studySkillId,
+        data: expect.objectContaining({ prerequisiteIds: [] }),
+      }),
+    ])
+    expect(rerendered.result.current.workspace.edges).toEqual([])
   })
 
   it('completes a quest without changing categories or skills', () => {

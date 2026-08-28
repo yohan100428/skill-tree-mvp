@@ -121,4 +121,13 @@ describe('version 3 workspace persistence', () => {
 
     expect(loadWorkspace(localStorage)).toEqual(createDefaultWorkspace())
   })
+
+  it('rejects skill ids reserved for derived mind-map nodes', () => {
+    const invalid = populatedWorkspace()
+    invalid.nodes[0].id = 'personal-root:me'
+    invalid.nodes[0].data.id = 'personal-root:me'
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(invalid))
+
+    expect(loadWorkspace(localStorage)).toEqual(createDefaultWorkspace())
+  })
 })

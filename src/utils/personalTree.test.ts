@@ -88,6 +88,23 @@ describe('personal skill map graph', () => {
     ])
   })
 
+  it('keeps a skill connected to its own goal when a legacy edge crosses categories', () => {
+    const workspace: WorkspaceData = {
+      ...createDefaultWorkspace(),
+      categories: [
+        category('fitness', '운동', '마라톤 완주'),
+        category('study', '공부', '논문 완성'),
+      ],
+      nodes: [skill('run', 'fitness'), skill('research', 'study', ['run'])],
+      edges: [{ id: 'run->research', source: 'run', target: 'research' }],
+    }
+
+    expect(edgePairs(workspace)).toEqual(expect.arrayContaining([
+      ['run', finalGoalNodeId('fitness')],
+      ['research', finalGoalNodeId('study')],
+    ]))
+  })
+
   it('places each added skill farther outward along its stable category direction', () => {
     const fitness = category('fitness', '운동', '마라톤 완주')
     const study = category('study', '공부', '논문 완성')
