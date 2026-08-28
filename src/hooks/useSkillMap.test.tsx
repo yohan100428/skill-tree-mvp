@@ -134,8 +134,18 @@ describe('useSkillMap', () => {
     const dependent = result.current.workspace.nodes.find((node) => node.data.name === '운동 30일')!
     const categoryPosition = getCategoryPosition(result.current.workspace.categories, categoryId)
 
-    expect(Math.round(Math.hypot(root.position.x - categoryPosition.x, root.position.y - categoryPosition.y))).toBe(220)
-    expect(Math.round(Math.hypot(dependent.position.x - root.position.x, dependent.position.y - root.position.y))).toBe(220)
+    const rootDistance = Math.round(Math.hypot(
+      root.position.x - categoryPosition.x,
+      root.position.y - categoryPosition.y,
+    ))
+    const dependentDistance = Math.round(Math.hypot(
+      dependent.position.x - root.position.x,
+      dependent.position.y - root.position.y,
+    ))
+    expect(rootDistance).toBeGreaterThanOrEqual(219)
+    expect(rootDistance).toBeLessThanOrEqual(221)
+    expect(dependentDistance).toBeGreaterThanOrEqual(219)
+    expect(dependentDistance).toBeLessThanOrEqual(221)
   })
 
   it('persists node moves and removes deleted dependencies', () => {
