@@ -7,7 +7,6 @@ export const CategoryNode = ({ data }: NodeProps<CategoryNodeType>) => (
     <Handle type="target" position={Position.Top} isConnectable={false} className="branch-handle" />
     <small>CATEGORY</small>
     <strong>{data.name}</strong>
-    <span>{data.coinName} · {data.coins}</span>
     <Handle type="source" position={Position.Bottom} isConnectable={false} className="branch-handle" />
   </article>
 )

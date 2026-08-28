@@ -2,10 +2,11 @@ import { Background, BackgroundVariant, Controls, MiniMap, ReactFlow } from '@xy
 import type { Connection, EdgeChange, NodeChange, NodeTypes } from '@xyflow/react'
 import type { PersonalTreeMap, PersonalTreeNode, SkillNode as SkillNodeType } from '../types/skillTree'
 import { CategoryNode } from './CategoryNode'
+import { FinalGoalNode } from './FinalGoalNode'
 import { SkillNode } from './SkillNode'
 import { MeRoot } from './mobile/MeRoot'
 
-const nodeTypes: NodeTypes = { me: MeRoot, category: CategoryNode, skill: SkillNode }
+const nodeTypes: NodeTypes = { me: MeRoot, category: CategoryNode, finalGoal: FinalGoalNode, skill: SkillNode }
 
 interface SkillTreeCanvasProps {
   map: PersonalTreeMap
@@ -53,8 +54,8 @@ export const SkillTreeCanvas = ({ map, ariaLabel = 'Skill map canvas', onNodesCh
         nodeColor={(node) => {
           if (node.type === 'me') return '#8be0c5'
           if (node.type === 'category') return '#a78bfa'
-          const status = (node as SkillNodeType).data.status
-          return status === 'unlocked' ? '#5eead4' : status === 'locked' ? '#475569' : '#60a5fa'
+          if (node.type === 'finalGoal') return '#fbbf24'
+          return '#60a5fa'
         }}
         maskColor="rgba(2, 6, 23, 0.72)"
       />

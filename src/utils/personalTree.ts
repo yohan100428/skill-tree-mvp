@@ -1,5 +1,6 @@
 import type {
   CategoryNode,
+  FinalGoalNode,
   MeNode,
   PersonalTreeMap,
   SkillEdge,
@@ -10,9 +11,13 @@ import type { XYPosition } from '@xyflow/react'
 
 export const ME_NODE_ID = 'personal-root:me'
 const CATEGORY_NODE_PREFIX = 'personal-category:'
+const FINAL_GOAL_NODE_PREFIX = 'personal-final-goal:'
 
 export const categoryNodeId = (categoryId: string): string =>
   `${CATEGORY_NODE_PREFIX}${categoryId}`
+
+export const finalGoalNodeId = (categoryId: string): string =>
+  `${FINAL_GOAL_NODE_PREFIX}${categoryId}`
 
 const categoryAngle = (categories: TreeCategory[], categoryId: string): number => {
   if (!categories.some((category) => category.id === categoryId)) return 0
@@ -94,9 +99,29 @@ export const buildPersonalTree = (workspace: WorkspaceData): PersonalTreeMap => 
       data: {
         categoryId: category.id,
         name: category.name,
-        coinName: category.coinName,
-        coins: category.coins,
       },
+      draggable: false,
+      connectable: false,
+      deletable: false,
+    }
+  })
+  const finalGoalNodes: FinalGoalNode[] = workspace.categories.map((category) => {
+    const angle = categoryAngle(workspace.categories, category.id)
+    const direction = { x: Math.cos(angle), y: Math.sin(angle) }
+    const categoryPosition = getCategoryPosition(workspace.categories, category.id)
+    const categorySkills = workspace.nodes.filter((skill) => skill.data.categoryId === category.id)
+    const farthestProjection = Math.max(
+      categoryPosition.x * direction.x + categoryPosition.y * direction.y,
+      ...categorySkills.map((skill) => skill.position.x * direction.x + skill.position.y * direction.y),
+    )
+    return {
+      id: finalGoalNodeId(category.id),
+      type: 'finalGoal',
+      position: {
+        x: roundedCoordinate(direction.x * (farthestProjection + 260)),
+        y: roundedCoordinate(direction.y * (farthestProjection + 260)),
+      },
+      data: { categoryId: category.id, label: category.finalGoal },
       draggable: false,
       connectable: false,
       deletable: false,
@@ -107,9 +132,18 @@ export const buildPersonalTree = (workspace: WorkspaceData): PersonalTreeMap => 
   const rootSkillEdges = workspace.nodes
     .filter((skill) => skill.data.prerequisiteIds.length === 0)
     .map((skill) => derivedEdge(categoryNodeId(skill.data.categoryId), skill.id))
+  const finalGoalEdges = workspace.categories.flatMap((category) => {
+    const categorySkills = workspace.nodes.filter((skill) => skill.data.categoryId === category.id)
+    const terminalSkills = categorySkills.filter((skill) =>
+      !workspace.edges.some((edge) => edge.source === skill.id))
+    const sources = terminalSkills.length > 0
+      ? terminalSkills.map((skill) => skill.id)
+      : [categoryNodeId(category.id)]
+    return sources.map((source) => derivedEdge(source, finalGoalNodeId(category.id)))
+  })
 
   return {
-    nodes: [meNode, ...categoryNodes, ...workspace.nodes],
-    edges: [...categoryEdges, ...rootSkillEdges, ...workspace.edges],
+    nodes: [meNode, ...categoryNodes, ...finalGoalNodes, ...workspace.nodes],
+    edges: [...categoryEdges, ...rootSkillEdges, ...finalGoalEdges, ...workspace.edges],
   }
 }
