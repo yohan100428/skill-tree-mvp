@@ -63,6 +63,21 @@ button:disabled { cursor: default; }
 }
 .page-intro h1 { margin: 7px 0 2px; color: #f8faff; font-size: 30px; line-height: 1; letter-spacing: -0.04em; }
 .page-intro p { margin: 8px 0 0; color: #9aa6ba; font-size: 15px; }
+.page-intro--actions { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.context-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.context-add-button {
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px solid #7898e7;
+  border-radius: 13px;
+  color: #0a111c;
+  background: #88a7f0;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.context-add-button--secondary { color: #cdd8f4; border-color: #3b4a68; background: #1a2231; }
+.context-add-button:disabled { opacity: 0.38; }
 
 .daily-progress, .quest-card, .available-card, .tree-balance, .empty-state {
   border: 1px solid #252d3d;
@@ -254,7 +269,7 @@ button:disabled { cursor: default; }
   left: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   min-height: calc(72px + env(safe-area-inset-bottom));
   padding: 6px 12px env(safe-area-inset-bottom);
   border-top: 1px solid #283041;
@@ -263,7 +278,6 @@ button:disabled { cursor: default; }
 }
 .bottom-navigation button { min-height: 56px; border: 0; color: #69758b; background: transparent; font-size: 12px; font-weight: 800; }
 .bottom-navigation button.is-active { color: #f3f6ff; }
-.bottom-navigation .add-navigation { align-self: center; justify-self: center; width: 50px; min-height: 50px; border-radius: 17px; color: #0a111c; background: #88a7f0; font-size: 30px; line-height: 1; }
 .coin-feedback { position: absolute; right: 24px; bottom: 88px; z-index: 25; padding: 10px 14px; border: 1px solid #396a5e; border-radius: 999px; color: #a9f0d9; background: #18342c; font-size: 12px; font-weight: 800; animation: feedback-in 180ms ease-out; }
 @keyframes feedback-in { from { opacity: 0; transform: translateY(6px); } }
 
@@ -282,8 +296,8 @@ button:disabled { cursor: default; }
 .danger-action { color: #f2a4ac !important; }
 
 .mobile-form { display: grid; gap: 16px; padding-top: 12px; }
-.mobile-form label, .settings-tree-row label { display: grid; gap: 7px; color: #8995aa; font-size: 11px; font-weight: 800; letter-spacing: 0.05em; }
-.mobile-form input, .mobile-form textarea, .mobile-form select, .settings-tree-row input {
+.mobile-form label, .settings-tree-row label, .settings-profile-row label { display: grid; gap: 7px; color: #8995aa; font-size: 11px; font-weight: 800; letter-spacing: 0.05em; }
+.mobile-form input, .mobile-form textarea, .mobile-form select, .settings-tree-row input, .settings-profile-row input {
   width: 100%;
   min-height: 48px;
   padding: 11px 13px;
@@ -297,7 +311,7 @@ button:disabled { cursor: default; }
   letter-spacing: 0;
 }
 .mobile-form textarea { resize: vertical; }
-.mobile-form input:focus, .mobile-form textarea:focus, .mobile-form select:focus, .settings-tree-row input:focus { border-color: #7898e7; }
+.mobile-form input:focus, .mobile-form textarea:focus, .mobile-form select:focus, .settings-tree-row input:focus, .settings-profile-row input:focus { border-color: #7898e7; }
 .stepper-field { margin: 0; padding: 0; border: 0; }
 .stepper-field legend { margin-bottom: 7px; color: #8995aa; font-size: 11px; font-weight: 800; }
 .stepper-field > div { display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; overflow: hidden; border: 1px solid #343e51; border-radius: 12px; background: #0e131d; text-align: center; }
@@ -305,7 +319,7 @@ button:disabled { cursor: default; }
 .stepper-field strong { font-size: 14px; }
 .full-button { width: 100%; min-height: 48px; margin-top: 4px; }
 .primary-button:disabled { opacity: 0.4; }
-.secondary-button, .reset-button, .settings-tree-row button { min-height: 44px; padding: 0 14px; border: 1px solid #374156; border-radius: 12px; color: #c8d0df; background: #1b2230; font-size: 12px; font-weight: 800; }
+.secondary-button, .reset-button, .settings-tree-row button, .settings-profile-row button { min-height: 44px; padding: 0 14px; border: 1px solid #374156; border-radius: 12px; color: #c8d0df; background: #1b2230; font-size: 12px; font-weight: 800; }
 
 .status-badge { justify-self: start; padding: 5px 8px; border-radius: 999px; color: #9aa7bb; background: #2b3341; font-size: 9px; font-weight: 900; letter-spacing: 0.1em; }
 .status-badge--available { color: #aec2fa; background: #28395f; }
@@ -319,6 +333,7 @@ button:disabled { cursor: default; }
 
 .settings-content h3 { margin: 2px 0; color: #8793a8; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
 .settings-tree-list { display: grid; gap: 10px; }
+.settings-profile-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; padding: 13px; border: 1px solid #2d3647; border-radius: 14px; background: #101620; }
 .settings-tree-row { display: grid; gap: 10px; padding: 13px; border: 1px solid #2d3647; border-radius: 14px; background: #101620; }
 .settings-tree-row > div { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .reset-button { width: 100%; margin-top: 8px; color: #f0a3ab; border-color: #683841; background: #2b171c; }

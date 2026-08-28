@@ -55,10 +55,9 @@ describe('mobile skill tree app', () => {
     expect(screen.getByTestId('me-root')).toHaveTextContent('ME')
   })
 
-  it('does not reset while R is typed in a form field', () => {
+  it('does not reset while R is typed in a mission form field', () => {
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-    fireEvent.click(within(screen.getByRole('dialog', { name: '무엇을 추가할까요?' })).getByRole('button', { name: 'Daily Quest' }))
+    fireEvent.click(screen.getByRole('button', { name: '미션 추가' }))
 
     const form = screen.getByRole('dialog', { name: 'NEW QUEST' })
     const input = within(form).getByRole('textbox', { name: '퀘스트' })
@@ -84,16 +83,15 @@ describe('mobile skill tree app', () => {
     expect(screen.getByTestId('quest-group-fitness')).toBeInTheDocument()
   })
 
-  it('offers Tree creation first when a fresh workspace has no categories', () => {
+  it('keeps category creation available above an empty Tree', () => {
     localStorage.clear()
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
 
-    const addSheet = screen.getByRole('dialog', { name: '무엇을 추가할까요?' })
-    expect(within(addSheet).getByText('먼저 Tree를 만들어 주세요.')).toBeInTheDocument()
-    expect(within(addSheet).getByRole('button', { name: 'Tree' })).toBeInTheDocument()
-    expect(within(addSheet).queryByRole('button', { name: 'Daily Quest' })).not.toBeInTheDocument()
-    expect(within(addSheet).queryByRole('button', { name: 'Skill' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '카테고리 추가' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '스킬 추가' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: '카테고리 추가' }))
+    expect(screen.getByRole('dialog', { name: 'NEW TREE' })).toBeInTheDocument()
   })
 
   it('keeps quest completion available for an existing workspace', () => {
@@ -119,12 +117,18 @@ describe('mobile skill tree app', () => {
     expect(screen.getByTestId('quest-group-fitness')).toHaveTextContent('Fitness Coin 0')
   })
 
-  it('shows only Today, Tree, and Add in primary navigation', () => {
+  it('keeps only page navigation at the bottom and shows contextual add actions above', () => {
     render(<App />)
 
     const navigation = screen.getByRole('navigation', { name: 'Main navigation' })
     expect(within(navigation).getAllByRole('button').map((button) => button.textContent))
-      .toEqual(['Today', 'Tree', '+'])
+      .toEqual(['Today', 'Tree'])
+    expect(screen.getByRole('button', { name: '미션 추가' })).toBeInTheDocument()
+
+    fireEvent.click(within(navigation).getByRole('button', { name: 'Tree' }))
+    expect(screen.getByRole('button', { name: '카테고리 추가' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '스킬 추가' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '미션 추가' })).not.toBeInTheDocument()
   })
 
   it('shows every category and skill on one ME-centered personal skill map', () => {
@@ -148,10 +152,9 @@ describe('mobile skill tree app', () => {
     expect(within(details).getByText('조건 달성')).toBeInTheDocument()
   })
 
-  it('creates a Daily Quest from Add and shows it on Today immediately', () => {
+  it('opens mission creation directly from Today and shows it immediately', () => {
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-    fireEvent.click(within(screen.getByRole('dialog', { name: '무엇을 추가할까요?' })).getByRole('button', { name: 'Daily Quest' }))
+    fireEvent.click(screen.getByRole('button', { name: '미션 추가' }))
 
     const form = screen.getByRole('dialog', { name: 'NEW QUEST' })
     fireEvent.change(within(form).getByRole('textbox', { name: '퀘스트' }), { target: { value: '수학 문제 풀기' } })
@@ -164,10 +167,10 @@ describe('mobile skill tree app', () => {
     expect(screen.getByText('0 / 5')).toBeInTheDocument()
   })
 
-  it('creates a Skill with one prerequisite and shows it in the selected Tree', () => {
+  it('opens skill creation directly from Tree and shows the new branch', () => {
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-    fireEvent.click(within(screen.getByRole('dialog', { name: '무엇을 추가할까요?' })).getByRole('button', { name: 'Skill' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
+    fireEvent.click(screen.getByRole('button', { name: '스킬 추가' }))
 
     const form = screen.getByRole('dialog', { name: 'NEW SKILL' })
     fireEvent.change(within(form).getByRole('textbox', { name: '이름' }), { target: { value: '아침 러닝' } })
@@ -181,8 +184,8 @@ describe('mobile skill tree app', () => {
 
   it('creates a category branch with an automatic coin name', () => {
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-    fireEvent.click(within(screen.getByRole('dialog', { name: '무엇을 추가할까요?' })).getByRole('button', { name: 'Tree' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
+    fireEvent.click(screen.getByRole('button', { name: '카테고리 추가' }))
 
     const form = screen.getByRole('dialog', { name: 'NEW TREE' })
     fireEvent.change(within(form).getByRole('textbox', { name: '트리 이름' }), { target: { value: '독서' } })
@@ -229,6 +232,21 @@ describe('mobile skill tree app', () => {
     expect(within(canvas).getByTestId('me-root')).toHaveTextContent('ME')
     expect(within(canvas).queryByTestId(/^category-node-/)).not.toBeInTheDocument()
     expect(within(canvas).queryByTestId(/^skill-node-/)).not.toBeInTheDocument()
+  })
+
+  it('shows the saved user name at the center of the personal tree', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Open settings' }))
+
+    const settings = screen.getByRole('dialog', { name: 'SETTINGS' })
+    fireEvent.change(within(settings).getByRole('textbox', { name: '사용자 이름' }), {
+      target: { value: '민준' },
+    })
+    fireEvent.click(within(settings).getByRole('button', { name: '사용자 이름 저장' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
+    expect(screen.getByTestId('me-root')).toHaveTextContent('민준')
+    expect(loadWorkspace(localStorage).userName).toBe('민준')
   })
 
   it('deletes a selected canvas node from its mobile detail sheet', () => {

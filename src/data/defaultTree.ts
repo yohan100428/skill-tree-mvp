@@ -71,6 +71,7 @@ export const createLegacyDemoWorkspace = (): WorkspaceData => {
 
   return {
     version: 2,
+    userName: 'ME',
     selectedCategoryId: 'fitness',
     categories: categories.map((category) => ({ ...category })),
     quests: quests.map((quest) => ({ ...quest })),
@@ -80,6 +81,7 @@ export const createLegacyDemoWorkspace = (): WorkspaceData => {
 
 export const createDefaultWorkspace = (): WorkspaceData => ({
   version: 2,
+  userName: 'ME',
   selectedCategoryId: null,
   categories: [],
   quests: [],

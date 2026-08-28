@@ -21,6 +21,7 @@ describe('version 2 workspace persistence', () => {
 
   it('round-trips categories, quests, skill unlocks, edges, and positions', () => {
     const workspace = createLegacyDemoWorkspace()
+    workspace.userName = '민준'
     workspace.categories[0].coins = 47
     workspace.quests[0].completedDate = '2026-08-24'
     workspace.nodes[0].position = { x: 777, y: 333 }
@@ -31,6 +32,7 @@ describe('version 2 workspace persistence', () => {
 
     const restored = loadWorkspace(localStorage)
     expect(restored.version).toBe(2)
+    expect(restored.userName).toBe('민준')
     expect(restored.selectedCategoryId).toBe('fitness')
     expect(restored.categories[0]).toMatchObject({ coinName: 'Fitness Coin', coins: 47 })
     expect(restored.quests[0]).toMatchObject({ completedDate: '2026-08-24', rewardCoins: 1 })

@@ -9,6 +9,7 @@ interface TodayPageProps {
   onCompleteQuest: (quest: DailyQuest, category: TreeCategory) => void
   onUnlockSkill: (skillId: string) => void
   onOpenQuestMenu: (questId: string) => void
+  onAddMission: () => void
 }
 
 const displayDate = (today: string): string => {
@@ -24,6 +25,7 @@ export const TodayPage = ({
   onCompleteQuest,
   onUnlockSkill,
   onOpenQuestMenu,
+  onAddMission,
 }: TodayPageProps) => {
   const completed = quests.filter((quest) => quest.completedDate === today).length
   const percent = quests.length === 0 ? 0 : Math.round((completed / quests.length) * 100)
@@ -31,10 +33,13 @@ export const TodayPage = ({
 
   return (
     <div className="page today-page">
-      <section className="page-intro">
-        <span className="eyebrow">DAILY CHECK-IN</span>
-        <h1>TODAY</h1>
-        <p>{displayDate(today)}</p>
+      <section className="page-intro page-intro--actions">
+        <div>
+          <span className="eyebrow">DAILY CHECK-IN</span>
+          <h1>TODAY</h1>
+          <p>{displayDate(today)}</p>
+        </div>
+        <button type="button" className="context-add-button" aria-label="미션 추가" disabled={categories.length === 0} onClick={onAddMission}>＋ 미션</button>
       </section>
 
       <section className="daily-progress" aria-label="오늘의 진행">
@@ -59,10 +64,10 @@ export const TodayPage = ({
           ) : null
         })}
         {categories.length === 0 && (
-          <section className="empty-state"><strong>아직 Tree가 없어요</strong><p>아래 + 버튼으로 첫 Tree를 만들어 보세요.</p></section>
+          <section className="empty-state"><strong>아직 카테고리가 없어요</strong><p>Tree 화면에서 첫 카테고리를 만들어 보세요.</p></section>
         )}
         {categories.length > 0 && quests.length === 0 && (
-          <section className="empty-state"><strong>오늘의 Quest가 없어요</strong><p>아래 + 버튼으로 바로 추가할 수 있어요.</p></section>
+          <section className="empty-state"><strong>오늘의 미션이 없어요</strong><p>위의 + 미션 버튼으로 바로 추가할 수 있어요.</p></section>
         )}
       </div>
 

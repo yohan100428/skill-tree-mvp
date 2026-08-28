@@ -31,7 +31,7 @@ export type SkillNode = Node<SkillData, 'skill'>
 export type SkillEdge = Edge
 
 export type MeNode = Node<Record<string, unknown> & {
-  label: 'ME'
+  label: string
 }, 'me'>
 
 export type CategoryNode = Node<Record<string, unknown> & {
@@ -55,6 +55,7 @@ export interface SkillMap {
 
 export interface WorkspaceData extends SkillMap {
   version: 2
+  userName: string
   categories: TreeCategory[]
   quests: DailyQuest[]
   selectedCategoryId: string | null

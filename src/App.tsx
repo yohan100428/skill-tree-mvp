@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { QuestForm } from './components/forms/QuestForm'
 import { SkillForm } from './components/forms/SkillForm'
 import { TreeForm } from './components/forms/TreeForm'
-import { AddActionSheet } from './components/mobile/AddActionSheet'
 import { AppHeader } from './components/mobile/AppHeader'
 import { BottomNavigation } from './components/mobile/BottomNavigation'
 import type { MobilePage } from './components/mobile/BottomNavigation'
@@ -17,7 +16,6 @@ import { canCompleteQuest, getLocalDate } from './utils/questLogic'
 import { STORAGE_KEY } from './utils/storage'
 
 type Sheet =
-  | { type: 'add' }
   | { type: 'questForm'; questId?: string }
   | { type: 'questActions'; questId: string }
   | { type: 'skillForm'; skillId?: string }
@@ -102,6 +100,7 @@ const App = () => {
             onCompleteQuest={completeQuest}
             onUnlockSkill={actions.unlockSkill}
             onOpenQuestMenu={(questId) => setSheet({ type: 'questActions', questId })}
+            onAddMission={() => { setSelectedSkillId(undefined); setSheet({ type: 'questForm' }) }}
           />
         ) : (
           <TreePage
@@ -111,6 +110,8 @@ const App = () => {
             onNodesChange={actions.changeNodes}
             onEdgesChange={actions.changeEdges}
             onConnect={(connection) => { actions.connectSkills(connection) }}
+            onAddCategory={() => { setSelectedSkillId(undefined); setSheet({ type: 'treeForm' }) }}
+            onAddSkill={() => { setSelectedSkillId(undefined); setSheet({ type: 'skillForm' }) }}
           />
         )}
       </div>
@@ -118,7 +119,6 @@ const App = () => {
       <BottomNavigation
         page={page}
         onNavigate={navigate}
-        onAdd={() => { setSelectedSkillId(undefined); setSheet({ type: 'add' }) }}
       />
 
       {selectedSkill && (
@@ -135,13 +135,6 @@ const App = () => {
               setSelectedSkillId(undefined)
             }
           }}
-        />
-      )}
-      {sheet?.type === 'add' && (
-        <AddActionSheet
-          hasTrees={actions.workspace.categories.length > 0}
-          onClose={() => setSheet(undefined)}
-          onChoose={(kind) => setSheet({ type: `${kind}Form` } as Sheet)}
         />
       )}
       {sheet?.type === 'questActions' && sheetQuest && (
@@ -197,8 +190,10 @@ const App = () => {
       )}
       {sheet?.type === 'settings' && (
         <SettingsSheet
+          userName={actions.workspace.userName}
           categories={actions.workspace.categories}
           onClose={() => setSheet(undefined)}
+          onUpdateUserName={actions.updateUserName}
           onUpdateCategory={actions.updateCategory}
           onDeleteCategory={actions.deleteCategory}
           onReset={() => { actions.resetWorkspace(); setPage('today'); setSheet(undefined) }}

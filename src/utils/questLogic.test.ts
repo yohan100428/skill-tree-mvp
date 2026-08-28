@@ -4,6 +4,7 @@ import { canCompleteQuest, completeDailyQuest, getLocalDate } from './questLogic
 
 const workspace = (completedDate: string | null = null): WorkspaceData => ({
   version: 2,
+  userName: 'ME',
   selectedCategoryId: 'fitness',
   categories: [{ id: 'fitness', name: 'Fitness', coinName: 'Fitness Coin', coins: 10 }],
   quests: [{

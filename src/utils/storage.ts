@@ -150,6 +150,9 @@ const parseWorkspace = (value: unknown): WorkspaceData | null => {
   const map = recalculateMap({ nodes: value.nodes, edges: value.edges }, categories)
   return {
     version: 2,
+    userName: typeof value.userName === 'string' && value.userName.trim()
+      ? value.userName.trim()
+      : 'ME',
     selectedCategoryId: value.selectedCategoryId,
     categories,
     quests,
@@ -158,6 +161,7 @@ const parseWorkspace = (value: unknown): WorkspaceData | null => {
 }
 
 const workspaceContentSignature = (workspace: WorkspaceData): string => JSON.stringify({
+  userName: workspace.userName,
   selectedCategoryId: workspace.selectedCategoryId,
   categories: workspace.categories.map(({ id, name, coinName, coins }) => ({ id, name, coinName, coins })),
   quests: workspace.quests.map(({ id, categoryId, title, rewardCoins, completedDate }) => ({

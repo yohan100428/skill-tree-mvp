@@ -81,7 +81,7 @@ export const buildPersonalTree = (workspace: WorkspaceData): PersonalTreeMap => 
     id: ME_NODE_ID,
     type: 'me',
     position: { x: 0, y: 0 },
-    data: { label: 'ME' },
+    data: { label: workspace.userName },
     draggable: false,
     connectable: false,
     deletable: false,

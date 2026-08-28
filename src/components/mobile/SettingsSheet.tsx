@@ -24,17 +24,26 @@ const TreeSettingsRow = ({ category, onUpdate, onDelete }: TreeSettingsRowProps)
 }
 
 interface SettingsSheetProps {
+  userName: string
   categories: TreeCategory[]
   onClose: () => void
+  onUpdateUserName: (userName: string) => void
   onUpdateCategory: (categoryId: string, patch: Partial<Pick<TreeCategory, 'name' | 'coinName'>>) => void
   onDeleteCategory: (categoryId: string) => void
   onReset: () => void
 }
 
-export const SettingsSheet = ({ categories, onClose, onUpdateCategory, onDeleteCategory, onReset }: SettingsSheetProps) => (
-  <BottomSheet titleId="settings-title" onClose={onClose}>
-    <div className="settings-content">
+export const SettingsSheet = ({ userName, categories, onClose, onUpdateUserName, onUpdateCategory, onDeleteCategory, onReset }: SettingsSheetProps) => {
+  const [name, setName] = useState(userName)
+  return (
+    <BottomSheet titleId="settings-title" onClose={onClose}>
+      <div className="settings-content">
       <h2 id="settings-title">SETTINGS</h2>
+      <h3>Profile</h3>
+      <div className="settings-profile-row">
+        <label>사용자 이름<input aria-label="사용자 이름" value={name} onChange={(event) => setName(event.target.value)} /></label>
+        <button type="button" aria-label="사용자 이름 저장" onClick={() => onUpdateUserName(name)}>저장</button>
+      </div>
       <h3>Manage Trees</h3>
       <div className="settings-tree-list">
         {categories.map((category) => (
@@ -51,6 +60,7 @@ export const SettingsSheet = ({ categories, onClose, onUpdateCategory, onDeleteC
       <button type="button" className="reset-button" onClick={() => {
         if (window.confirm('모든 Tree, Quest, Skill을 삭제하고 ME만 남길까요?')) onReset()
       }}>Reset All Data</button>
-    </div>
-  </BottomSheet>
-)
+      </div>
+    </BottomSheet>
+  )
+}

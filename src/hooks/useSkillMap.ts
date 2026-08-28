@@ -44,6 +44,7 @@ export interface NewSkillInput {
 
 export interface SkillMapActions {
   workspace: WorkspaceData
+  updateUserName: (userName: string) => void
   selectedCategory?: TreeCategory
   selectCategory: (categoryId: string) => void
   addCategory: (name?: string, coinName?: string) => string
@@ -72,6 +73,10 @@ export const useSkillMap = (): SkillMapActions => {
     () => workspace.categories.find((category) => category.id === workspace.selectedCategoryId),
     [workspace.categories, workspace.selectedCategoryId],
   )
+
+  const updateUserName = useCallback((userName: string) => {
+    setWorkspace((current) => ({ ...current, userName: userName.trim() || 'ME' }))
+  }, [])
 
   const selectCategory = useCallback((categoryId: string) => {
     setWorkspace((current) => current.categories.some((category) => category.id === categoryId)
@@ -291,6 +296,7 @@ export const useSkillMap = (): SkillMapActions => {
 
   return {
     workspace,
+    updateUserName,
     selectedCategory,
     selectCategory,
     addCategory,

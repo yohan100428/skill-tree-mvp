@@ -10,6 +10,8 @@ interface TreePageProps {
   onNodesChange: (changes: NodeChange<SkillNode>[]) => void
   onEdgesChange: (changes: EdgeChange[]) => void
   onConnect: (connection: Connection) => void
+  onAddCategory: () => void
+  onAddSkill: () => void
 }
 
 export const TreePage = ({
@@ -19,14 +21,22 @@ export const TreePage = ({
   onNodesChange,
   onEdgesChange,
   onConnect,
+  onAddCategory,
+  onAddSkill,
 }: TreePageProps) => {
   const map = buildPersonalTree(workspace)
 
   return (
     <div className="page tree-page">
-      <section className="page-intro page-intro--compact">
-        <span className="eyebrow">YOUR GROWTH MAP</span>
-        <h1>TREE</h1>
+      <section className="page-intro page-intro--compact page-intro--actions">
+        <div>
+          <span className="eyebrow">YOUR GROWTH MAP</span>
+          <h1>TREE</h1>
+        </div>
+        <div className="context-actions">
+          <button type="button" className="context-add-button context-add-button--secondary" aria-label="카테고리 추가" onClick={onAddCategory}>＋ 카테고리</button>
+          <button type="button" className="context-add-button" aria-label="스킬 추가" disabled={categories.length === 0} onClick={onAddSkill}>＋ 스킬</button>
+        </div>
       </section>
       {categories.length > 0 && (
         <div className="tree-balance tree-balance--summary">
