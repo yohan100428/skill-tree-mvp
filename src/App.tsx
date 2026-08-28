@@ -24,7 +24,7 @@ type Sheet =
 
 const App = () => {
   const actions = useSkillMap()
-  const [page, setPage] = useState<MobilePage>('today')
+  const [page, setPage] = useState<MobilePage>('tree')
   const [today, setToday] = useState(() => getLocalDate())
   const [selectedSkillId, setSelectedSkillId] = useState<string>()
   const [sheet, setSheet] = useState<Sheet>()
@@ -53,7 +53,7 @@ const App = () => {
       actions.resetWorkspace()
       setSelectedSkillId(undefined)
       setSheet(undefined)
-      setPage('today')
+      setPage('tree')
     }
     window.addEventListener('keydown', clearCachedWorkspace)
     return () => window.removeEventListener('keydown', clearCachedWorkspace)
@@ -183,7 +183,7 @@ const App = () => {
           onUpdateUserName={actions.updateUserName}
           onUpdateCategory={actions.updateCategory}
           onDeleteCategory={actions.deleteCategory}
-          onReset={() => { actions.resetWorkspace(); setPage('today'); setSheet(undefined) }}
+          onReset={() => { actions.resetWorkspace(); setPage('tree'); setSheet(undefined) }}
         />
       )}
     </main>

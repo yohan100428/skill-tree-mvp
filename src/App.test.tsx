@@ -39,8 +39,9 @@ describe('goal-ended personal mind map app', () => {
   it('shows only the user-name root on a fresh tree', () => {
     localStorage.clear()
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
 
+    expect(screen.getByRole('heading', { name: 'TREE' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tree' })).toHaveClass('is-active')
     const canvas = screen.getByRole('region', { name: 'personal mind map canvas' })
     expect(within(canvas).getByTestId('me-root')).toHaveTextContent('ME')
     expect(within(canvas).queryByTestId(/^category-node-/)).not.toBeInTheDocument()
@@ -50,7 +51,6 @@ describe('goal-ended personal mind map app', () => {
   it('requires a final goal and creates the complete first branch atomically', () => {
     localStorage.clear()
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'Tree' }))
     fireEvent.click(screen.getByRole('button', { name: '카테고리 추가' }))
 
     const form = screen.getByRole('dialog', { name: 'NEW CATEGORY' })
@@ -95,6 +95,7 @@ describe('goal-ended personal mind map app', () => {
 
   it('keeps quests as simple daily check-offs', () => {
     render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Today' }))
     const fitnessGroup = screen.getByTestId('quest-group-fitness')
 
     fireEvent.click(within(fitnessGroup).getByRole('button', { name: '오늘 달리기 완료' }))
@@ -105,6 +106,7 @@ describe('goal-ended personal mind map app', () => {
 
   it('creates and edits reward-free quests', () => {
     render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Today' }))
     fireEvent.click(screen.getByRole('button', { name: '미션 추가' }))
     const createForm = screen.getByRole('dialog', { name: 'NEW QUEST' })
     fireEvent.change(within(createForm).getByRole('textbox', { name: '퀘스트' }), { target: { value: '수학 문제 풀기' } })
