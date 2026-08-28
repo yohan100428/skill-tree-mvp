@@ -1,19 +1,15 @@
 import type { Edge, Node } from '@xyflow/react'
 
-export type SkillStatus = 'locked' | 'available' | 'unlocked'
-
 export interface TreeCategory {
   id: string
   name: string
-  coinName: string
-  coins: number
+  finalGoal: string
 }
 
 export interface DailyQuest {
   id: string
   categoryId: string
   title: string
-  rewardCoins: number
   completedDate: string | null
 }
 
@@ -22,26 +18,23 @@ export type SkillData = Record<string, unknown> & {
   name: string
   description: string
   categoryId: string
-  requiredCoins: number
   prerequisiteIds: string[]
-  status: SkillStatus
 }
 
 export type SkillNode = Node<SkillData, 'skill'>
 export type SkillEdge = Edge
 
-export type MeNode = Node<Record<string, unknown> & {
-  label: string
-}, 'me'>
-
+export type MeNode = Node<Record<string, unknown> & { label: string }, 'me'>
 export type CategoryNode = Node<Record<string, unknown> & {
   categoryId: string
   name: string
-  coinName: string
-  coins: number
 }, 'category'>
+export type FinalGoalNode = Node<Record<string, unknown> & {
+  categoryId: string
+  label: string
+}, 'finalGoal'>
 
-export type PersonalTreeNode = MeNode | CategoryNode | SkillNode
+export type PersonalTreeNode = MeNode | CategoryNode | FinalGoalNode | SkillNode
 
 export interface PersonalTreeMap {
   nodes: PersonalTreeNode[]
@@ -54,7 +47,7 @@ export interface SkillMap {
 }
 
 export interface WorkspaceData extends SkillMap {
-  version: 2
+  version: 3
   userName: string
   categories: TreeCategory[]
   quests: DailyQuest[]
@@ -65,9 +58,4 @@ export interface DependencyResult {
   map: SkillMap
   changed: boolean
   reason?: string
-}
-
-export interface UnlockResult {
-  map: SkillMap
-  changed: boolean
 }

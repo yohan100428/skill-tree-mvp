@@ -1,93 +1,109 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createDefaultWorkspace, createLegacyDemoWorkspace } from '../data/defaultTree'
-import { loadWorkspace, saveWorkspace, STORAGE_KEY } from './storage'
+import type { WorkspaceData } from '../types/skillTree'
+import { LEGACY_STORAGE_KEY, loadWorkspace, saveWorkspace, STORAGE_KEY } from './storage'
 
-describe('version 2 workspace persistence', () => {
+const populatedWorkspace = (): WorkspaceData => ({
+  version: 3,
+  userName: '민준',
+  selectedCategoryId: 'fitness',
+  categories: [{ id: 'fitness', name: '운동', finalGoal: '마라톤 완주' }],
+  quests: [{ id: 'daily', categoryId: 'fitness', title: '달리기', completedDate: '2026-08-28' }],
+  nodes: [{
+    id: 'run',
+    type: 'skill',
+    position: { x: 777, y: 333 },
+    data: { id: 'run', name: '달리기', description: 'Root skill', categoryId: 'fitness', prerequisiteIds: [] },
+  }],
+  edges: [],
+})
+
+describe('version 3 workspace persistence', () => {
   beforeEach(() => localStorage.clear())
 
-  it('migrates the untouched legacy demo to the empty initial workspace', () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(createLegacyDemoWorkspace()))
-
-    expect(loadWorkspace(localStorage)).toEqual(createDefaultWorkspace())
+  it('uses a lean version 3 workspace model', () => {
+    expect(createDefaultWorkspace().version).toBe(3)
+    expect(STORAGE_KEY).toBe('skill-tree-workspace-v3')
   })
 
-  it('preserves legacy-shaped data after the user has changed it', () => {
-    const workspace = createLegacyDemoWorkspace()
-    workspace.nodes[0].data.description = '내가 만든 설명'
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace))
-
-    expect(loadWorkspace(localStorage).nodes[0].data.description).toBe('내가 만든 설명')
-  })
-
-  it('round-trips categories, quests, skill unlocks, edges, and positions', () => {
-    const workspace = createLegacyDemoWorkspace()
-    workspace.userName = '민준'
-    workspace.categories[0].coins = 47
-    workspace.quests[0].completedDate = '2026-08-24'
-    workspace.nodes[0].position = { x: 777, y: 333 }
-    workspace.nodes[0].data.description = 'Root skill'
-    workspace.nodes[0].data.status = 'unlocked'
-
+  it('round-trips goals, quests, skills, and positions', () => {
+    const workspace = populatedWorkspace()
     saveWorkspace(localStorage, workspace)
 
-    const restored = loadWorkspace(localStorage)
-    expect(restored.version).toBe(2)
-    expect(restored.userName).toBe('민준')
-    expect(restored.selectedCategoryId).toBe('fitness')
-    expect(restored.categories[0]).toMatchObject({ coinName: 'Fitness Coin', coins: 47 })
-    expect(restored.quests[0]).toMatchObject({ completedDate: '2026-08-24', rewardCoins: 1 })
-    expect(restored.nodes[0]).toMatchObject({
-      position: { x: 777, y: 333 },
-      data: { categoryId: 'fitness', description: 'Root skill', status: 'unlocked' },
-    })
-    expect(restored.edges.length).toBeGreaterThan(0)
+    expect(loadWorkspace(localStorage)).toEqual(workspace)
   })
 
-  it('returns the empty initial workspace for malformed JSON', () => {
+  it('migrates user-authored version 2 data without coin or unlock fields', () => {
+    const legacy = createLegacyDemoWorkspace()
+    legacy.userName = '민준'
+    legacy.categories[0].coins = 47
+    legacy.quests[0].completedDate = '2026-08-24'
+    legacy.nodes[0].position = { x: 777, y: 333 }
+    legacy.nodes[0].data.description = 'Root skill'
+    legacy.nodes[0].data.status = 'unlocked'
+    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(legacy))
+
+    const migrated = loadWorkspace(localStorage)
+    expect(migrated.version).toBe(3)
+    expect(migrated.userName).toBe('민준')
+    expect(migrated.categories[0]).toEqual({ id: 'fitness', name: '운동', finalGoal: '최종목표' })
+    expect(migrated.quests[0]).toEqual({
+      id: 'fitness-daily', categoryId: 'fitness', title: '오늘 운동하기', completedDate: '2026-08-24',
+    })
+    expect(migrated.nodes[0]).toEqual(expect.objectContaining({
+      position: { x: 777, y: 333 },
+      data: {
+        id: 'fitness-start',
+        name: '운동 시작',
+        description: 'Root skill',
+        categoryId: 'fitness',
+        prerequisiteIds: [],
+      },
+    }))
+    expect(migrated.edges.length).toBeGreaterThan(0)
+  })
+
+  it('prefers current data when both storage versions exist', () => {
+    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(createLegacyDemoWorkspace()))
+    saveWorkspace(localStorage, populatedWorkspace())
+
+    expect(loadWorkspace(localStorage).userName).toBe('민준')
+  })
+
+  it('returns the empty workspace for malformed current JSON', () => {
     localStorage.setItem(STORAGE_KEY, '{bad json')
     expect(loadWorkspace(localStorage)).toEqual(createDefaultWorkspace())
   })
 
-  it('returns the empty initial workspace for a skill with an invalid category', () => {
-    const invalid = createLegacyDemoWorkspace()
+  it('rejects invalid category references', () => {
+    const invalid = populatedWorkspace()
     invalid.nodes[0].data.categoryId = 'missing'
     localStorage.setItem(STORAGE_KEY, JSON.stringify(invalid))
+
     expect(loadWorkspace(localStorage)).toEqual(createDefaultWorkspace())
   })
 
-  it('ignores the previous version 1 storage document', () => {
-    localStorage.setItem('skill-tree-workspace-v1', JSON.stringify({
-      version: 1,
-      activeTreeId: 'old',
-      trees: [{ id: 'old', name: 'Old', nodes: [], edges: [] }],
-    }))
-    expect(loadWorkspace(localStorage)).toEqual(createDefaultWorkspace())
-  })
-
-  it('rejects duplicate category, quest, or node ids', () => {
-    const invalid = createLegacyDemoWorkspace()
-    invalid.nodes.push({ ...invalid.nodes[0], data: { ...invalid.nodes[0].data } })
+  it('rejects blank final goals', () => {
+    const invalid = populatedWorkspace()
+    invalid.categories[0].finalGoal = '   '
     localStorage.setItem(STORAGE_KEY, JSON.stringify(invalid))
 
     expect(loadWorkspace(localStorage)).toEqual(createDefaultWorkspace())
   })
 
-  it('rejects a cyclic stored graph', () => {
-    const invalid = createLegacyDemoWorkspace()
-    invalid.edges.push({
-      id: 'fitness-100-days->fitness-start',
-      source: 'fitness-100-days',
-      target: 'fitness-start',
+  it('rejects duplicate ids and cyclic graphs', () => {
+    const invalid = populatedWorkspace()
+    invalid.nodes.push({
+      id: 'strength',
+      type: 'skill',
+      position: { x: 0, y: 0 },
+      data: { id: 'strength', name: '근력', description: '', categoryId: 'fitness', prerequisiteIds: ['run'] },
     })
-    invalid.nodes[0].data.prerequisiteIds.push('fitness-100-days')
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(invalid))
-
-    expect(loadWorkspace(localStorage)).toEqual(createDefaultWorkspace())
-  })
-
-  it('rejects disagreement between edges and prerequisite ids', () => {
-    const invalid = createLegacyDemoWorkspace()
-    invalid.nodes.find((node) => node.id === 'fitness-3-week')!.data.prerequisiteIds = []
+    invalid.edges.push(
+      { id: 'run->strength', source: 'run', target: 'strength' },
+      { id: 'strength->run', source: 'strength', target: 'run' },
+    )
+    invalid.nodes[0].data.prerequisiteIds = ['strength']
     localStorage.setItem(STORAGE_KEY, JSON.stringify(invalid))
 
     expect(loadWorkspace(localStorage)).toEqual(createDefaultWorkspace())

@@ -1,34 +1,28 @@
-import { createDefaultWorkspace, createLegacyDemoWorkspace } from '../data/defaultTree'
-import type {
-  DailyQuest,
-  SkillData,
-  SkillEdge,
-  SkillNode,
-  TreeCategory,
-  WorkspaceData,
-} from '../types/skillTree'
-import { recalculateMap, toNonNegativeInteger } from './skillLogic'
+import { createDefaultWorkspace } from '../data/defaultTree'
+import type { DailyQuest, SkillData, SkillEdge, SkillNode, TreeCategory, WorkspaceData } from '../types/skillTree'
 
-export const STORAGE_KEY = 'skill-tree-workspace-v2'
+export const STORAGE_KEY = 'skill-tree-workspace-v3'
+export const LEGACY_STORAGE_KEY = 'skill-tree-workspace-v2'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
+
+const hasUniqueIds = (items: Array<{ id: string }>): boolean =>
+  new Set(items.map((item) => item.id)).size === items.length
 
 const isCategory = (value: unknown): value is TreeCategory =>
   isRecord(value) &&
   typeof value.id === 'string' &&
   typeof value.name === 'string' &&
-  typeof value.coinName === 'string' &&
-  typeof value.coins === 'number' &&
-  Number.isFinite(value.coins)
+  typeof value.finalGoal === 'string' &&
+  Boolean(value.name.trim()) &&
+  Boolean(value.finalGoal.trim())
 
 const isQuest = (value: unknown): value is DailyQuest =>
   isRecord(value) &&
   typeof value.id === 'string' &&
   typeof value.categoryId === 'string' &&
   typeof value.title === 'string' &&
-  typeof value.rewardCoins === 'number' &&
-  Number.isFinite(value.rewardCoins) &&
   (value.completedDate === null || typeof value.completedDate === 'string')
 
 const isSkillData = (value: unknown): value is SkillData =>
@@ -37,9 +31,6 @@ const isSkillData = (value: unknown): value is SkillData =>
   typeof value.name === 'string' &&
   typeof value.description === 'string' &&
   typeof value.categoryId === 'string' &&
-  typeof value.requiredCoins === 'number' &&
-  Number.isFinite(value.requiredCoins) &&
-  ['locked', 'available', 'unlocked'].includes(String(value.status)) &&
   Array.isArray(value.prerequisiteIds) &&
   value.prerequisiteIds.every((id) => typeof id === 'string')
 
@@ -59,9 +50,6 @@ const isSkillEdge = (value: unknown): value is SkillEdge =>
   typeof value.id === 'string' &&
   typeof value.source === 'string' &&
   typeof value.target === 'string'
-
-const hasUniqueIds = (items: Array<{ id: string }>): boolean =>
-  new Set(items.map((item) => item.id)).size === items.length
 
 const isValidGraph = (nodes: SkillNode[], edges: SkillEdge[]): boolean => {
   if (!hasUniqueIds(nodes) || !hasUniqueIds(edges)) return false
@@ -111,92 +99,120 @@ const isValidGraph = (nodes: SkillNode[], edges: SkillEdge[]): boolean => {
   return visited === nodes.length
 }
 
-const parseWorkspace = (value: unknown): WorkspaceData | null => {
-  if (
-    !isRecord(value) ||
-    value.version !== 2 ||
-    !Array.isArray(value.categories) ||
-    !value.categories.every(isCategory) ||
-    !Array.isArray(value.quests) ||
-    !value.quests.every(isQuest) ||
-    !Array.isArray(value.nodes) ||
-    !value.nodes.every(isSkillNode) ||
-    !Array.isArray(value.edges) ||
-    !value.edges.every(isSkillEdge) ||
-    !(value.selectedCategoryId === null || typeof value.selectedCategoryId === 'string')
-  ) return null
-
-  if (
-    !hasUniqueIds(value.categories) ||
-    !hasUniqueIds(value.quests) ||
-    !isValidGraph(value.nodes, value.edges)
-  ) return null
-
-  const categories = value.categories.map((category) => ({
-    ...category,
-    coins: toNonNegativeInteger(category.coins),
-  }))
+const createWorkspace = (
+  value: Record<string, unknown>,
+  categories: TreeCategory[],
+  quests: DailyQuest[],
+  nodes: SkillNode[],
+  edges: SkillEdge[],
+): WorkspaceData | null => {
+  if (!hasUniqueIds(categories) || !hasUniqueIds(quests) || !isValidGraph(nodes, edges)) return null
   const categoryIds = new Set(categories.map((category) => category.id))
+  const selectedCategoryId = value.selectedCategoryId
   if (
-    (value.selectedCategoryId !== null && !categoryIds.has(value.selectedCategoryId)) ||
-    value.quests.some((quest) => !categoryIds.has(quest.categoryId)) ||
-    value.nodes.some((node) => !categoryIds.has(node.data.categoryId))
+    !(selectedCategoryId === null || typeof selectedCategoryId === 'string') ||
+    (selectedCategoryId !== null && !categoryIds.has(selectedCategoryId)) ||
+    quests.some((quest) => !categoryIds.has(quest.categoryId)) ||
+    nodes.some((node) => !categoryIds.has(node.data.categoryId))
   ) return null
 
-  const quests = value.quests.map((quest) => ({
-    ...quest,
-    rewardCoins: toNonNegativeInteger(quest.rewardCoins),
-  }))
-  const map = recalculateMap({ nodes: value.nodes, edges: value.edges }, categories)
   return {
-    version: 2,
-    userName: typeof value.userName === 'string' && value.userName.trim()
-      ? value.userName.trim()
-      : 'ME',
-    selectedCategoryId: value.selectedCategoryId,
+    version: 3,
+    userName: typeof value.userName === 'string' && value.userName.trim() ? value.userName.trim() : 'ME',
+    selectedCategoryId,
     categories,
     quests,
-    ...map,
+    nodes,
+    edges,
   }
 }
 
-const workspaceContentSignature = (workspace: WorkspaceData): string => JSON.stringify({
-  userName: workspace.userName,
-  selectedCategoryId: workspace.selectedCategoryId,
-  categories: workspace.categories.map(({ id, name, coinName, coins }) => ({ id, name, coinName, coins })),
-  quests: workspace.quests.map(({ id, categoryId, title, rewardCoins, completedDate }) => ({
-    id,
-    categoryId,
-    title,
-    rewardCoins,
-    completedDate,
-  })),
-  nodes: workspace.nodes.map(({ id, type, position, data }) => ({
-    id,
-    type,
-    position: { x: position.x, y: position.y },
-    data: {
-      id: data.id,
-      name: data.name,
-      description: data.description,
-      categoryId: data.categoryId,
-      requiredCoins: data.requiredCoins,
-      prerequisiteIds: data.prerequisiteIds,
-      status: data.status,
-    },
-  })),
-  edges: workspace.edges.map(({ id, source, target, type, animated }) => ({ id, source, target, type, animated })),
-})
+const parseWorkspace = (value: unknown): WorkspaceData | null => {
+  if (
+    !isRecord(value) ||
+    value.version !== 3 ||
+    !Array.isArray(value.categories) || !value.categories.every(isCategory) ||
+    !Array.isArray(value.quests) || !value.quests.every(isQuest) ||
+    !Array.isArray(value.nodes) || !value.nodes.every(isSkillNode) ||
+    !Array.isArray(value.edges) || !value.edges.every(isSkillEdge)
+  ) return null
 
-const isUntouchedLegacyDemo = (workspace: WorkspaceData): boolean =>
-  workspaceContentSignature(workspace) === workspaceContentSignature(createLegacyDemoWorkspace())
+  return createWorkspace(
+    value,
+    value.categories.map(({ id, name, finalGoal }) => ({ id, name: name.trim(), finalGoal: finalGoal.trim() })),
+    value.quests.map(({ id, categoryId, title, completedDate }) => ({ id, categoryId, title, completedDate })),
+    value.nodes.map(({ id, type, position, data }) => ({
+      id,
+      type,
+      position: { x: position.x, y: position.y },
+      data: {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        categoryId: data.categoryId,
+        prerequisiteIds: [...data.prerequisiteIds],
+      },
+    })),
+    value.edges.map(({ id, source, target, type, animated }) => ({ id, source, target, type, animated })),
+  )
+}
+
+const migrateLegacyWorkspace = (value: unknown): WorkspaceData | null => {
+  if (
+    !isRecord(value) || value.version !== 2 ||
+    !Array.isArray(value.categories) ||
+    !value.categories.every((category) => isRecord(category) && typeof category.id === 'string' && typeof category.name === 'string') ||
+    !Array.isArray(value.quests) ||
+    !value.quests.every((quest) => isRecord(quest) && typeof quest.id === 'string' && typeof quest.categoryId === 'string' && typeof quest.title === 'string' && (quest.completedDate === null || typeof quest.completedDate === 'string')) ||
+    !Array.isArray(value.nodes) ||
+    !value.nodes.every((node) => isRecord(node) && typeof node.id === 'string' && node.type === 'skill' && isRecord(node.position) && typeof node.position.x === 'number' && Number.isFinite(node.position.x) && typeof node.position.y === 'number' && Number.isFinite(node.position.y) && isRecord(node.data) && typeof node.data.id === 'string' && typeof node.data.name === 'string' && typeof node.data.description === 'string' && typeof node.data.categoryId === 'string' && Array.isArray(node.data.prerequisiteIds) && node.data.prerequisiteIds.every((id) => typeof id === 'string')) ||
+    !Array.isArray(value.edges) || !value.edges.every(isSkillEdge)
+  ) return null
+
+  const categories: TreeCategory[] = value.categories.map((category) => ({
+    id: String(category.id),
+    name: String(category.name).trim(),
+    finalGoal: '최종목표',
+  }))
+  const quests: DailyQuest[] = value.quests.map((quest) => ({
+    id: String(quest.id),
+    categoryId: String(quest.categoryId),
+    title: String(quest.title),
+    completedDate: quest.completedDate as string | null,
+  }))
+  const nodes: SkillNode[] = value.nodes.map((node) => {
+    const data = node.data as Record<string, unknown>
+    const position = node.position as Record<string, unknown>
+    return {
+      id: String(node.id),
+      type: 'skill',
+      position: { x: Number(position.x), y: Number(position.y) },
+      data: {
+        id: String(data.id),
+        name: String(data.name),
+        description: String(data.description),
+        categoryId: String(data.categoryId),
+        prerequisiteIds: [...(data.prerequisiteIds as string[])],
+      },
+    }
+  })
+  const edges: SkillEdge[] = value.edges.map((edge) => ({
+    id: edge.id,
+    source: edge.source,
+    target: edge.target,
+    type: edge.type,
+    animated: edge.animated,
+  }))
+  return createWorkspace(value, categories, quests, nodes, edges)
+}
 
 export const loadWorkspace = (storage: Storage): WorkspaceData => {
   try {
-    const serialized = storage.getItem(STORAGE_KEY)
-    if (!serialized) return createDefaultWorkspace()
-    const parsed = parseWorkspace(JSON.parse(serialized))
-    return !parsed || isUntouchedLegacyDemo(parsed) ? createDefaultWorkspace() : parsed
+    const current = storage.getItem(STORAGE_KEY)
+    if (current !== null) return parseWorkspace(JSON.parse(current)) ?? createDefaultWorkspace()
+    const legacy = storage.getItem(LEGACY_STORAGE_KEY)
+    if (legacy !== null) return migrateLegacyWorkspace(JSON.parse(legacy)) ?? createDefaultWorkspace()
+    return createDefaultWorkspace()
   } catch {
     return createDefaultWorkspace()
   }
