@@ -1,199 +1,147 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createLegacyDemoWorkspace } from '../data/defaultTree'
+import type { WorkspaceData } from '../types/skillTree'
 import { getCategoryPosition } from '../utils/personalTree'
 import { saveWorkspace } from '../utils/storage'
 import { useSkillMap } from './useSkillMap'
 
+const existingWorkspace = (): WorkspaceData => ({
+  version: 3,
+  userName: '민준',
+  selectedCategoryId: 'fitness',
+  categories: [
+    { id: 'fitness', name: '운동', finalGoal: '마라톤 완주' },
+    { id: 'study', name: '공부', finalGoal: '논문 완성' },
+  ],
+  quests: [{ id: 'fitness-daily', categoryId: 'fitness', title: '오늘 달리기', completedDate: null }],
+  nodes: [
+    { id: 'warmup', type: 'skill', position: { x: 100, y: 100 }, data: { id: 'warmup', name: '준비운동', description: '', categoryId: 'fitness', prerequisiteIds: [] } },
+    { id: 'run', type: 'skill', position: { x: 300, y: 100 }, data: { id: 'run', name: '달리기', description: '', categoryId: 'fitness', prerequisiteIds: ['warmup'] } },
+  ],
+  edges: [{ id: 'warmup->run', source: 'warmup', target: 'run', type: 'smoothstep' }],
+})
+
 describe('useSkillMap', () => {
   beforeEach(() => {
     localStorage.clear()
-    const existingWorkspace = createLegacyDemoWorkspace()
-    existingWorkspace.nodes[0].data.description = 'Existing user workspace'
-    saveWorkspace(localStorage, existingWorkspace)
+    saveWorkspace(localStorage, existingWorkspace())
   })
 
-  it('creates and selects a category with a default coin name', () => {
+  it('requires and stores a final goal when creating a category', () => {
     const { result } = renderHook(() => useSkillMap())
+    let blankResult: string | undefined
+    let categoryId: string | undefined
 
-    act(() => { result.current.addCategory('독서', '') })
+    act(() => { blankResult = result.current.addCategory('독서', '   ') })
+    act(() => { categoryId = result.current.addCategory(' 독서 ', ' 100권 읽기 ') })
 
-    const category = result.current.workspace.categories.at(-1)
-    expect(category).toMatchObject({ name: '독서', coinName: '독서 Coin', coins: 0 })
-    expect(result.current.workspace.selectedCategoryId).toBe(category?.id)
+    expect(blankResult).toBeUndefined()
+    expect(result.current.workspace.categories.at(-1)).toEqual({
+      id: categoryId,
+      name: '독서',
+      finalGoal: '100권 읽기',
+    })
+    expect(result.current.workspace.selectedCategoryId).toBe(categoryId)
   })
 
   it('deleting a category cascades through its quests, skills, and edges', () => {
     const { result } = renderHook(() => useSkillMap())
-    let categoryId = ''
-    let skillId = ''
+    act(() => { result.current.deleteCategory('fitness') })
 
-    act(() => { categoryId = result.current.addCategory('Music', 'Music Coin') })
-    act(() => { result.current.addQuest({ title: 'Practice', categoryId, rewardCoins: 2 }) })
-    act(() => {
-      skillId = result.current.addSkill({
-        name: 'Play scales',
-        categoryId,
-        requiredCoins: 3,
-      })!
-    })
-    act(() => { result.current.connectSkills({ source: 'fitness-start', target: skillId, sourceHandle: null, targetHandle: null }) })
-    act(() => { result.current.deleteCategory(categoryId) })
-
-    expect(result.current.workspace.categories.some((category) => category.id === categoryId)).toBe(false)
-    expect(result.current.workspace.quests.some((quest) => quest.categoryId === categoryId)).toBe(false)
-    expect(result.current.workspace.nodes.some((node) => node.id === skillId)).toBe(false)
-    expect(result.current.workspace.edges.some((edge) => edge.target === skillId)).toBe(false)
+    expect(result.current.workspace.categories.map(({ id }) => id)).toEqual(['study'])
+    expect(result.current.workspace.quests).toEqual([])
+    expect(result.current.workspace.nodes).toEqual([])
+    expect(result.current.workspace.edges).toEqual([])
   })
 
-  it('completing a quest updates coins and recalculates skill status', () => {
+  it('completes a quest without changing categories or skills', () => {
     const { result } = renderHook(() => useSkillMap())
-    let skillId = ''
+    const categoriesBefore = result.current.workspace.categories
+    const nodesBefore = result.current.workspace.nodes
 
-    act(() => {
-      skillId = result.current.addSkill({
-        name: 'One coin skill',
-        categoryId: 'fitness',
-        requiredCoins: 1,
-      })!
-    })
-    expect(result.current.workspace.nodes.find((node) => node.id === skillId)?.data.status).toBe('locked')
+    act(() => { result.current.completeQuest('fitness-daily', '2026-08-28') })
 
-    act(() => { result.current.completeQuest('fitness-daily', '2026-08-24') })
-
-    expect(result.current.workspace.categories.find((category) => category.id === 'fitness')?.coins).toBe(1)
-    expect(result.current.workspace.nodes.find((node) => node.id === skillId)?.data.status).toBe('available')
+    expect(result.current.workspace.quests[0].completedDate).toBe('2026-08-28')
+    expect(result.current.workspace.categories).toEqual(categoriesBefore)
+    expect(result.current.workspace.nodes).toEqual(nodesBefore)
   })
 
-  it('rejects an empty or unknown category when editing a skill', () => {
+  it('creates a reward-free quest for the selected category', () => {
     const { result } = renderHook(() => useSkillMap())
+    let questId: string | undefined
 
-    act(() => { result.current.updateSkill('fitness-start', { categoryId: '' }) })
-    expect(result.current.workspace.nodes.find((node) => node.id === 'fitness-start')?.data.categoryId)
-      .toBe('fitness')
+    act(() => { questId = result.current.addQuest({ title: '수학 공부', categoryId: 'study' }) })
 
-    act(() => { result.current.updateSkill('fitness-start', { categoryId: 'missing' }) })
-    expect(result.current.workspace.nodes.find((node) => node.id === 'fitness-start')?.data.categoryId)
-      .toBe('fitness')
-  })
-
-  it('creates a complete quest for an explicitly selected Tree', () => {
-    const { result } = renderHook(() => useSkillMap())
-    let questId = ''
-
-    act(() => {
-      questId = result.current.addQuest({
-        title: '수학 공부',
-        categoryId: 'study',
-        rewardCoins: 2,
-      })!
-    })
-
-    expect(result.current.workspace.quests.find((quest) => quest.id === questId)).toMatchObject({
+    expect(result.current.workspace.quests.find((quest) => quest.id === questId)).toEqual({
+      id: questId,
       title: '수학 공부',
       categoryId: 'study',
-      rewardCoins: 2,
       completedDate: null,
     })
   })
 
-  it('creates a complete skill and preserves its prerequisite as an edge', () => {
+  it('creates a skill and preserves its selected prerequisite edge', () => {
     const { result } = renderHook(() => useSkillMap())
-    let skillId = ''
+    let skillId: string | undefined
 
     act(() => {
       skillId = result.current.addSkill({
-        name: '운동 30일',
-        description: '매일 운동합니다.',
+        name: '10km 달리기',
+        description: '매주 거리를 늘립니다.',
         categoryId: 'fitness',
-        requiredCoins: 30,
-        prerequisiteId: 'fitness-3-week',
-      })!
+        prerequisiteId: 'run',
+      })
     })
 
-    expect(result.current.workspace.nodes.find((node) => node.id === skillId)?.data).toMatchObject({
-      name: '운동 30일',
-      description: '매일 운동합니다.',
+    expect(result.current.workspace.nodes.find((node) => node.id === skillId)?.data).toEqual({
+      id: skillId,
+      name: '10km 달리기',
+      description: '매주 거리를 늘립니다.',
       categoryId: 'fitness',
-      requiredCoins: 30,
-      prerequisiteIds: ['fitness-3-week'],
+      prerequisiteIds: ['run'],
     })
-    expect(result.current.workspace.edges).toContainEqual(expect.objectContaining({
-      source: 'fitness-3-week',
-      target: skillId,
-    }))
+    expect(result.current.workspace.edges).toContainEqual(expect.objectContaining({ source: 'run', target: skillId }))
   })
 
-  it('places newly created skills outward along their category branch', () => {
+  it('places new skills outward along their category branch', () => {
     localStorage.clear()
     const { result } = renderHook(() => useSkillMap())
     let categoryId = ''
+    let rootId = ''
 
-    act(() => { categoryId = result.current.addCategory('운동', 'Fitness Coin') })
-    act(() => {
-      result.current.addSkill({ name: '운동 시작', categoryId, requiredCoins: 0 })
-    })
-    const rootSkill = result.current.workspace.nodes.find((node) => node.data.name === '운동 시작')!
-    act(() => {
-      result.current.addSkill({
-        name: '운동 30일',
-        categoryId,
-        requiredCoins: 30,
-        prerequisiteId: rootSkill.id,
-      })
-    })
-    const dependentSkill = result.current.workspace.nodes.find((node) => node.data.name === '운동 30일')!
-
+    act(() => { categoryId = result.current.addCategory('운동', '마라톤 완주')! })
+    act(() => { rootId = result.current.addSkill({ name: '운동 시작', categoryId })! })
+    act(() => { result.current.addSkill({ name: '운동 30일', categoryId, prerequisiteId: rootId }) })
+    const root = result.current.workspace.nodes.find((node) => node.id === rootId)!
+    const dependent = result.current.workspace.nodes.find((node) => node.data.name === '운동 30일')!
     const categoryPosition = getCategoryPosition(result.current.workspace.categories, categoryId)
-    const rootDistance = Math.round(Math.hypot(
-      rootSkill.position.x - categoryPosition.x,
-      rootSkill.position.y - categoryPosition.y,
-    ))
-    const dependentDistance = Math.round(Math.hypot(
-      dependentSkill.position.x - rootSkill.position.x,
-      dependentSkill.position.y - rootSkill.position.y,
-    ))
-    expect(rootDistance).toBeGreaterThanOrEqual(219)
-    expect(rootDistance).toBeLessThanOrEqual(221)
-    expect(dependentDistance).toBeGreaterThanOrEqual(219)
-    expect(dependentDistance).toBeLessThanOrEqual(221)
+
+    expect(Math.round(Math.hypot(root.position.x - categoryPosition.x, root.position.y - categoryPosition.y))).toBe(220)
+    expect(Math.round(Math.hypot(dependent.position.x - root.position.x, dependent.position.y - root.position.y))).toBe(220)
   })
 
-  it('persists node positions changed on the Tree canvas', () => {
+  it('persists node moves and removes deleted dependencies', () => {
     const { result } = renderHook(() => useSkillMap())
 
     act(() => {
-      result.current.changeNodes([
-        { id: 'fitness-start', type: 'position', position: { x: 420, y: 260 }, dragging: false },
-      ])
+      result.current.changeNodes([{ id: 'warmup', type: 'position', position: { x: 420, y: 260 }, dragging: false }])
+      result.current.changeEdges([{ id: 'warmup->run', type: 'remove' }])
     })
 
-    expect(result.current.workspace.nodes.find((node) => node.id === 'fitness-start')?.position)
-      .toEqual({ x: 420, y: 260 })
+    expect(result.current.workspace.nodes.find((node) => node.id === 'warmup')?.position).toEqual({ x: 420, y: 260 })
+    expect(result.current.workspace.edges).toEqual([])
+    expect(result.current.workspace.nodes.find((node) => node.id === 'run')?.data.prerequisiteIds).toEqual([])
   })
 
-  it('removes a dependency when its canvas edge is deleted', () => {
+  it('edits the category goal and resets to an empty workspace', () => {
     const { result } = renderHook(() => useSkillMap())
-
-    act(() => {
-      result.current.changeEdges([{ id: 'fitness-start->fitness-3-week', type: 'remove' }])
-    })
-
-    expect(result.current.workspace.edges.some((edge) => edge.id === 'fitness-start->fitness-3-week')).toBe(false)
-    expect(result.current.workspace.nodes.find((node) => node.id === 'fitness-3-week')?.data.prerequisiteIds)
-      .toEqual([])
-  })
-
-  it('resets all in-memory changes to an empty goal workspace', () => {
-    const { result } = renderHook(() => useSkillMap())
-    act(() => { result.current.addCategory('음악', 'Music Coin') })
+    act(() => { result.current.updateCategory('fitness', { finalGoal: '울트라 마라톤 완주' }) })
+    expect(result.current.workspace.categories[0].finalGoal).toBe('울트라 마라톤 완주')
 
     act(() => { result.current.resetWorkspace() })
-
-    expect(result.current.workspace.categories).toEqual([])
-    expect(result.current.workspace.quests).toEqual([])
-    expect(result.current.workspace.nodes).toEqual([])
-    expect(result.current.workspace.edges).toEqual([])
-    expect(result.current.workspace.selectedCategoryId).toBeNull()
+    expect(result.current.workspace).toEqual(expect.objectContaining({
+      version: 3,
+      categories: [], quests: [], nodes: [], edges: [], selectedCategoryId: null,
+    }))
   })
 })

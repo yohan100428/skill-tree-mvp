@@ -1,5 +1,4 @@
 import type { DailyQuest, WorkspaceData } from '../types/skillTree'
-import { recalculateMap, toNonNegativeInteger } from './skillLogic'
 
 export const getLocalDate = (date = new Date()): string => {
   const year = date.getFullYear()
@@ -20,13 +19,10 @@ export const completeDailyQuest = (
   if (!quest || !canCompleteQuest(quest, today)) return workspace
   if (!workspace.categories.some((category) => category.id === quest.categoryId)) return workspace
 
-  const categories = workspace.categories.map((category) => category.id === quest.categoryId
-    ? { ...category, coins: toNonNegativeInteger(category.coins + toNonNegativeInteger(quest.rewardCoins)) }
-    : category)
-  const quests = workspace.quests.map((candidate) => candidate.id === questId
-    ? { ...candidate, completedDate: today }
-    : candidate)
-  const map = recalculateMap(workspace, categories)
-
-  return { ...workspace, ...map, categories, quests }
+  return {
+    ...workspace,
+    quests: workspace.quests.map((candidate) => candidate.id === questId
+      ? { ...candidate, completedDate: today }
+      : candidate),
+  }
 }
